@@ -1,0 +1,15 @@
+[Unit]
+Description=EAMENA Django Gunicorn Service
+After=celery.service
+
+[Service]
+User=arches
+Group=arches
+WorkingDirectory=/opt/arches/eamena
+ExecStart=/opt/arches/ENV/bin/gunicorn --workers 3 --timeout=20 --log-file=- --log-level=info --bind=0.0.0.0:8000 eamena.wsgi
+Environment="PATH=/opt/arches/ENV/bin:$PATH"
+Restart=always
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

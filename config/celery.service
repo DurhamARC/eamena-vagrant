@@ -1,0 +1,15 @@
+[Unit]
+Description=EAMENA Celery Broker Service
+After=rabbitmq-server.service
+
+[Service]
+User=arches
+Group=arches
+WorkingDirectory=/opt/arches/eamena
+ExecStart=/opt/arches/ENV/bin/python /opt/arches/eamena/manage.py celery start
+Environment="PATH=/opt/arches/ENV/bin:$PATH"
+Restart=always
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
