@@ -84,6 +84,7 @@ Vagrant.configure("2") do |config|
 
   # MariaDB data folder:
   #config.vm.synced_folder "postgres-data", "/usr/local/pgsql/data"
+  #config.vm.synced_folder "opt-arches", "/opt/arches", mount_options: ["dmode=775,fmode=777"]
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
