@@ -93,6 +93,14 @@ if ! dpkg-query -W -f='${Status}' elasticsearch | grep "ok installed"; then
     dpkg -i ./elasticsearch-8.3.3-amd64.deb
     # cleanup
     rm ./elasticsearch-8.3.3-amd64.deb
+else echo "elasticsearch ok"
+fi
+# === === === edit the elasticsearch service file, adding restart on failure === === ===
+if ! grep "Restart=on-failure" /lib/systemd/system/elasticsearch.service &> /dev/null; then
+    gawk -i inplace -v new='# Auto-restart on crash\nRestart=on-failure\nRestartSec=30s\n' '{print} sub(/\[Service\]/,""){print $0 new}' /lib/systemd/system/elasticsearch.service
+    systemctl daemon-reload
+    systemctl enable elasticsearch # not sure if required, but can't hurt
+else echo "elasticsearch service ok"
 fi
 
 # === === === edit the elasticsearch configuration file, replacing security settings === === ===
