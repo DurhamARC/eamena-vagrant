@@ -12,8 +12,9 @@ export TZ=Etc/UTC
 export $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)
 
 if ! grep "deploy.env" /home/vagrant/.bashrc > /dev/null; then
-    # Add environment variables to .bashrc for arches user
-    echo -e "\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)" >> /home/vagrant/.bashrc
+    # Add automatic environment variable loading from deploy.envto .bashrc for vagrant and arches users
+    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /home/vagrant/.bashrc
+    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
 fi
 
 # Check if required environment variables are set
@@ -274,6 +275,7 @@ if ! /opt/arches/ENV/bin/python -m pip show gunicorn >/dev/null; then
         cd /opt/arches/eamena
         python -m pip install -r requirements.txt
         python -m pip install geomet gunicorn
+        echo -e "source /opt/arches/ENV/bin/activate" >> /opt/arches/.bashrc
 EOF
 else echo "requirements ok"
 fi
@@ -325,6 +327,8 @@ if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
     sed -i -E "s/^(ARCHES_NAMESPACE_FOR_DATA_EXPORT)(.*)$/\1 = '$ESCAPED_REPLACE'/" /opt/arches/eamena/eamena/settings_local.py
     # SECRET_KEY
     sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" /opt/arches/eamena/eamena/settings_local.py
+    # MAPBOX_API_KEY
+    sed -i -E "s/^(MAPBOX_API_KEY)(.*)$/\1 = '$MAPBOX_API_KEY'/" /opt/arches/eamena/eamena/settings_local.py
 
     # done
     touch /opt/arches/eamena/.settings_customised
@@ -376,15 +380,10 @@ if ! [[ -d /opt/arches/eamena/eamena/staticfiles ]]; then
 # TODO: test a file inside staticfiles
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
 
-        # download and extract media.tar and staticfiles.tar 
-        # to /opt/arches/media and /opt/arches/eamena/eamena/staticfiles
-        # may need --strip-components=1 to remove the top level directory
-
-        mkdir -p /opt/arches/media /opt/arches/eamena/eamena/staticfiles
-        set -x
-        tar -xf /vagrant/arches_install_files/media.tar -C /opt/arches/media
-        tar -xf /vagrant/arches_install_files/staticfiles.tar -C /opt/arches/eamena/eamena/staticfiles
-        set +x
+        # download and extract media.tar to /opt/arches/media
+        echo "Extracting media.tar.gz to /opt/arches/media"
+        mkdir -p /opt/arches/media
+        tar -xf /vagrant/arches_install_files/media.tar.gz -C /opt/arches/media
 EOF
 else echo "ok"
 fi
@@ -434,6 +433,10 @@ if ! [[ -f /opt/arches/eamena/.grids_loaded ]]; then
         # Takes approx 2 minutes to run
         python manage.py packages -o import_business_data -s /vagrant/arches_install_files/GS.csv -ow overwrite
         python manage.py es reindex_database
+
+        # == CREATE SUPERUSER ==
+        # Uses the DJANGO_* credentials in the deploy.env file
+        python manage.py createsuperuser --no-input
 
         # === === Test it works using the backend === ===
         # upload a known working BU template (file.xlsx)
