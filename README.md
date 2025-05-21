@@ -27,6 +27,33 @@ script will run and set up the system from zero.
 Currently, VirtualBox only works with x86 instruction set machines. This is unlikely to change in future. You can
 experiment with the `docker` provider instead on ARM-based (or other instruction set) systems.
 
-The file `provisioning/bootstrap.sh` is where the magic happens. In the case of failures, this script can be re-run using the above command, and includes some naïve protection against work repetition and/or overwriting.
+The file `provisioning/bootstrap.sh` is where the magic happens. In the case of failures, this script can be re-run
+using the above command, and includes some naïve protection against work repetition and/or overwriting.
 
-This script is based on work by [@ItIsJordan](https://github.com/ItIsJordan) and [@taflynn](https://github.com/taflynn/), as described in [SETUP.md](SETUP.md). The bootstraps script automates their investigative work.
+This script is based on work by [@ItIsJordan](https://github.com/ItIsJordan) and [@taflynn](https://github.com/taflynn/),
+as described in [SETUP.md](SETUP.md). The bootstrap script automates their investigative work.
+
+You will need to populate `provisioning/deploy.env` with the correct environment variables. These are copied into the files on first boot. If they are incorrect, you will need to manually edit the modified files in the VM, or re-create it.
+
+## Troubleshooting
+
+### Unresponsive or site errors
+
+Check that the services are all running. Dependencies for the services look like this:
+
+  * Apache2
+  * Postgres
+  * ElasticSearch
+  * RabbitMQ
+    * Celery
+      * Gunicorn (Python server)
+
+Services can be checked using the command `sudo systemctl status \<servicename\>`, where servicename is one of e.g.
+`gunicorn`, `celery`, `rabbitmq-server` and so on.
+
+If you see a message like `A dependency job for celery.service failed. See 'journalctl -xe' for details`, a service
+may have failed to start. `sudo systemctl start \<service\>` can get it running again.
+
+### Map tiles are not displayed at `/search`
+
+The `MAPSERVER_API_KEY` may be incorrect or un-set. Check the key in `settings_local.py` (and `deploy.env`).
