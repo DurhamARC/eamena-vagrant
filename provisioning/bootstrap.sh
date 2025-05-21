@@ -14,7 +14,6 @@ export $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)
 if ! grep "deploy.env" /home/vagrant/.bashrc > /dev/null; then
     # Add automatic environment variable loading from deploy.envto .bashrc for vagrant and arches users
     echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /home/vagrant/.bashrc
-    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
 fi
 
 # Check if required environment variables are set
@@ -38,6 +37,7 @@ if ! id -nGz "arches" | grep -qzxF "sudo";
 then
     useradd -m -s $(which bash) -d /opt/arches arches
     usermod -aG sudo,vagrant,www-data arches
+    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
     echo "User created"
 else echo "user ok"
 fi
@@ -79,21 +79,24 @@ if ! dpkg-query -W -f='${Status}' elasticsearch | grep "ok installed"; then
 
     cd /home/vagrant
     rm -f ./elasticsearch-8.3.3-amd64.deb # remove if download failed on previous run
-
-    if [[ -f /vagrant/arches_install_files/elasticsearch-8.3.3-amd64.deb ]]; then
-        echo "Found local elasticsearch-8.3.3-amd64.deb"
-        cp -v /vagrant/arches_install_files/elasticsearch-8.3.3-amd64.deb ./
+    
+    ARCH=`dpkg --print-architecture`
+    
+    if [[ -f /vagrant/arches_install_files/elasticsearch-8.3.3-$ARCH.deb ]]; then
+        echo "Found local elasticsearch-8.3.3-$ARCH.deb"
+        cp -v /vagrant/arches_install_files/elasticsearch-8.3.3-$ARCH.deb ./
     else
         # download the deb package
-        echo "Downloading elasticsearch-8.3.3-amd64.deb"
+        echo "Downloading elasticsearch-8.3.3-$ARCH.deb"
         wget --no-verbose --show-progress  --progress=dot:mega \
-            "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.3.3-amd64.deb" # WD local
+            "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.3.3-$ARCH.deb" # WD local
     fi
 
     # install the deb package
-    dpkg -i ./elasticsearch-8.3.3-amd64.deb
-    # cleanup
-    rm ./elasticsearch-8.3.3-amd64.deb
+    dpkg -i ./elasticsearch-8.3.3-$ARCH.deb
+    # cleanup and don't download again
+    cp -v ./elasticsearch-8.3.3-$ARCH.deb /vagrant/arches_install_files/
+    rm ./elasticsearch-8.3.3-$ARCH.deb
 else echo "elasticsearch ok"
 fi
 # === === === edit the elasticsearch service file, adding restart on failure === === ===
