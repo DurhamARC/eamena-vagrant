@@ -244,4 +244,4 @@ MOBILE_DEFAULT_ONLINE_BASEMAP = {'default': 'mapbox://styles/mapbox/streets-v9'}
 
 ENABLE_CAPTCHA = False
 NOCAPTCHA = True
-
+MAPBOX_API_KEY = None
