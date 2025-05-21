@@ -3,23 +3,12 @@
 
 #
 # This is a multi-provider vagrantfile which contains configs for Virtualbox
-# and Docker. To run with a specific provider:
+# and UTM (e.g. on M1 Mac). To run with a specific provider:
 #
 #   vagrant up --provision --provider="virtualbox"
 # or:
-#   vagrant up --provision --provider="docker"
+#   vagrant up --provision --provider="utm"
 #
-
-# Install vagrant-disksize to allow resizing the vagrant box disk.
-#unless Vagrant.has_plugin?("vagrant-disksize")
-#    raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin is missing. Please install it using 'vagrant plugin install vagrant-disksize' and rerun 'vagrant up'"
-#end
-
-# Install vagrant-vbguest to update guest additions on box launch
-unless Vagrant.has_plugin?("vagrant-vbguest")
-    raise  Vagrant::Errors::VagrantError.new, "vagrant-vbguest plugin is missing. Please install it using 'vagrant plugin install vagrant-vbguest' and rerun 'vagrant up'"
-end
-
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -94,6 +83,16 @@ Vagrant.configure("2") do |config|
       # View the documentation for the provider you are using for more
       # information on available options.
 
+      # Install vagrant-vbguest to update guest additions on box launch
+      unless Vagrant.has_plugin?("vagrant-vbguest")
+          raise  Vagrant::Errors::VagrantError.new, "vagrant-vbguest plugin missing. Run 'vagrant plugin install vagrant-vbguest'."
+      end
+
+      # Install vagrant-disksize to allow resizing the vagrant box disk.
+      #unless Vagrant.has_plugin?("vagrant-disksize")
+      #    raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin missing. Run 'vagrant plugin install vagrant-disksize'."
+      #end
+
       # Every Vagrant development environment requires a box. You can search for
       # boxes at https://vagrantcloud.com/search.
       config.vm.box = "ubuntu/focal64"
@@ -124,22 +123,23 @@ Vagrant.configure("2") do |config|
       #config.disksize.size = '10GB'
   end
 
-  # Custom configuration for docker
-  config.vm.provider "docker" do |docker, override|
+  # Custom configuration for utm
+  config.vm.provider "utm" do |utm, override|
 
-    docker.image = "ubuntu/focal"
-    # docker doesnt use boxes
-    override.vm.box = nil
-
-    # Make sure it sets up ssh with the Dockerfile
-    # Vagrant is pretty dependent on ssh
-    override.ssh.insert_key = true
-    docker.has_ssh = true
-
-    # Configure Docker to allow access to more resources
-    docker.privileged = true
+      unless Vagrant.has_plugin?("vagrant_utm")
+          raise  Vagrant::Errors::VagrantError.new, "vagrant_utm plugin missing. Run 'vagrant plugin install vagrant_utm'."
+      end
+      
+      config.vm.box = "utm/ubuntu-24.04"
+      # Set VM properties for UTM
+      config.vm.provider "utm" do |u|
+          u.name = "debian_vm"
+          u.memory = 8192   # 4GB memory
+          u.cpus = 4          # 4 CPUs
+          u.directory_share_mode = "virtFS"
+          #u.directory_share_mode = "webDAV"  # Use webDAV for manual directory sharing
+      end
   end
-
 
   # Enable provisioning with a shell script. Additional provisioners such as
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
