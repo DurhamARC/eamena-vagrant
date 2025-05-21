@@ -8,7 +8,8 @@ Group=arches
 WorkingDirectory=/opt/arches/eamena
 ExecStart=/opt/arches/ENV/bin/python /opt/arches/eamena/manage.py celery start
 Environment="PATH=/opt/arches/ENV/bin:$PATH"
-Restart=always
+Restart=on-failure
+RestartSec=30s
 KillSignal=SIGINT
 
 [Install]
