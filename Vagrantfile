@@ -9,6 +9,7 @@
 # or:
 #   vagrant up --provision --provider="utm"
 #
+ENV['VAGRANT_DEFAULT_PROVIDER'] = "virtualbox"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
