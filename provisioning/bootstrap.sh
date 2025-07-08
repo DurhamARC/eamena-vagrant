@@ -332,6 +332,8 @@ if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
     sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" /opt/arches/eamena/eamena/settings_local.py
     # MAPBOX_API_KEY
     sed -i -E "s/^(MAPBOX_API_KEY)(.*)$/\1 = '$MAPBOX_API_KEY'/" /opt/arches/eamena/eamena/settings_local.py
+    # DEBUG
+    sed -i -E "s/^(DEBUG)(.*)$/\1 = '$DEBUG'/" /opt/arches/eamena/eamena/settings_local.py
 
     # done
     touch /opt/arches/eamena/.settings_customised
