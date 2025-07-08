@@ -9,7 +9,21 @@
 # or:
 #   vagrant up --provision --provider="utm"
 #
-ENV['VAGRANT_DEFAULT_PROVIDER'] = "virtualbox"
+ENV['VAGRANT_DEFAULT_PROVIDER'] ||= "virtualbox"
+
+# Check for required plugins only when using specific providers
+if ARGV.include?('--provider=utm') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 'utm'
+  unless Vagrant.has_plugin?("vagrant_utm")
+    raise Vagrant::Errors::VagrantError.new, "vagrant_utm plugin missing. Run 'vagrant plugin install vagrant_utm'."
+  end
+end
+
+if ARGV.include?('--provider=virtualbox') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 'virtualbox'
+  # Install vagrant-vbguest to update guest additions on box launch
+  unless Vagrant.has_plugin?("vagrant-vbguest")
+      raise  Vagrant::Errors::VagrantError.new, "vagrant-vbguest plugin missing. Run 'vagrant plugin install vagrant-vbguest'."
+  end
+end
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -19,6 +33,11 @@ Vagrant.configure("2") do |config|
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
   # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+  # Default box for VirtualBox (may need to be overridden per-provider)
+  config.vm.box = "ubuntu/focal64"
 
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
@@ -31,9 +50,8 @@ Vagrant.configure("2") do |config|
   # via 127.0.0.1 to disable public access
   # config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
 
-
-# NB: These ports WILL conflict with locally hosted services and docker containers running services 
-#     You should run EITHER vagrant (e.g. for server dev) OR docker desktop, not both!
+  # NB: These ports WILL conflict with locally hosted services and docker containers running services 
+  #     You should run EITHER vagrant (e.g. for server dev) OR docker desktop, not both!
 
   # Postgres (development)
   config.vm.network "forwarded_port", guest: 5432, host: 5432, host_ip: "127.0.0.1"
@@ -83,20 +101,10 @@ Vagrant.configure("2") do |config|
   config.vm.provider "virtualbox" do |vb|
       # View the documentation for the provider you are using for more
       # information on available options.
-
-      # Install vagrant-vbguest to update guest additions on box launch
-      unless Vagrant.has_plugin?("vagrant-vbguest")
-          raise  Vagrant::Errors::VagrantError.new, "vagrant-vbguest plugin missing. Run 'vagrant plugin install vagrant-vbguest'."
-      end
-
       # Install vagrant-disksize to allow resizing the vagrant box disk.
       #unless Vagrant.has_plugin?("vagrant-disksize")
       #    raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin missing. Run 'vagrant plugin install vagrant-disksize'."
       #end
-
-      # Every Vagrant development environment requires a box. You can search for
-      # boxes at https://vagrantcloud.com/search.
-      config.vm.box = "ubuntu/focal64"
 
       # Disable automatic box update checking. If you disable this, then
       # boxes will only be checked for updates when the user runs
@@ -127,19 +135,13 @@ Vagrant.configure("2") do |config|
   # Custom configuration for utm
   config.vm.provider "utm" do |utm, override|
 
-      unless Vagrant.has_plugin?("vagrant_utm")
-          raise  Vagrant::Errors::VagrantError.new, "vagrant_utm plugin missing. Run 'vagrant plugin install vagrant_utm'."
-      end
-      
-      config.vm.box = "utm/ubuntu-24.04"
       # Set VM properties for UTM
-      config.vm.provider "utm" do |u|
-          u.name = "debian_vm"
-          u.memory = 8192   # 4GB memory
-          u.cpus = 4          # 4 CPUs
-          u.directory_share_mode = "virtFS"
-          #u.directory_share_mode = "webDAV"  # Use webDAV for manual directory sharing
-      end
+      override.vm.box = "utm/ubuntu-24.04"
+      utm.name = "debian_vm"
+      utm.memory = 8192   # 8GB memory
+      utm.cpus = 4          # 4 CPUs
+      utm.directory_share_mode = "virtFS"
+      #utm.directory_share_mode = "webDAV"  # Use webDAV for manual directory sharing
   end
 
   # Enable provisioning with a shell script. Additional provisioners such as
