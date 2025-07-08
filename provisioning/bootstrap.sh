@@ -219,7 +219,7 @@ if ! [[ -f /etc/apache2/sites-available/arches.conf ]]; then
     cp -v /vagrant/config/arches.conf /etc/apache2/sites-available/arches.conf
     a2ensite arches.conf
     a2dissite 000-default.conf
-    a2enmod rewrite
+    a2enmod rewrite proxy proxy_http
     apache2ctl configtest
     systemctl restart apache2
     cd /opt
@@ -387,7 +387,7 @@ if ! [[ -d /opt/arches/eamena/eamena/staticfiles ]]; then
 
         # download and extract media.tar to /opt/arches/media
         echo "Extracting media.tar.gz to /opt/arches/media"
-        mkdir -p /opt/arches/media
+        mkdir -p /opt/arches/files /opt/arches/media
         tar -xf /vagrant/arches_install_files/media.tar.gz -C /opt/arches/media
 EOF
 else echo "ok"
