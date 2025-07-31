@@ -54,6 +54,11 @@ then
     useradd -m -s $(which bash) -d /opt/arches arches
     usermod -aG sudo,vagrant,www-data arches
     echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
+
+    if [ -z "$ARCHES_PASSWORD" ]; then
+        # If we've set a password in deploy.env, use it for arches:
+        echo "arches:${ARCHES_PASSWORD}" | chpasswd
+    fi
     echo "User created"
 else echo "user ok"
 fi
