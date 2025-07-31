@@ -25,6 +25,11 @@ if ARGV.include?('--provider=virtualbox') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 
   end
 end
 
+unless Vagrant.has_plugin?("vagrant-disksize")
+    raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin missing. Run 'vagrant plugin install vagrant-disksize'."
+end
+
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -37,7 +42,15 @@ Vagrant.configure("2") do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
   # Default box for VirtualBox (may need to be overridden per-provider)
-  config.vm.box = "ubuntu/focal64"
+  
+  # Focal 20.04 is no longer supported by PostgreSQL
+  #config.vm.box = "ubuntu/focal64" # v20.04
+
+  # Upgrade to Ubuntu 24.04: 
+  # We use image "cloud-image/ubuntu-24.04", as canonical do not publish Vagrant images
+  # for noble onwards due to HashiCorp's licence change... :/
+  #config.vm.box = "bento/ubuntu-24.04" # Hangs on boot at systemd.network.service :(
+  config.vm.box = "cloud-image/ubuntu-24.04" # May hang at GRUB (but can be passed by VM console)
 
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
@@ -91,8 +104,12 @@ Vagrant.configure("2") do |config|
   # configuration and should not attempt to copy the folders.
 
   # MariaDB data folder:
+  config.vm.synced_folder ".", "/vagrant", mount_options: ["dmode=775,fmode=777"]
   #config.vm.synced_folder "postgres-data", "/usr/local/pgsql/data"
   #config.vm.synced_folder "opt-arches", "/opt/arches", mount_options: ["dmode=775,fmode=777"]
+
+  # Set disk size
+  config.disksize.size = '20GB'
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.

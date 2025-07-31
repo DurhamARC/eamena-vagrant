@@ -31,6 +31,22 @@ then
     exit 1
 fi
 
+# Set optional version number variables if not set:
+if [ -z "$PYTHON_VERSION" ]; then
+    export PYTHON_VERSION=3.9
+fi
+if [ -z "$ELASTICSEARCH_VERSION" ]; then
+    export ELASTICSEARCH_VERSION=8.3.3
+fi
+if [ -z "$PSQL_VERSION" ]; then
+    export PSQL_VERSION=14
+fi
+if [ -z "$NODE_VERSION" ]; then
+    export NODE_VERSION=20.19.4
+    export NPM_VERSION=10.9.3
+    # prev: 14.17.6; 9.6.0
+fi
+
 # === create an arches user ===
 echo -e "$BORDER Creating Arches user and folder \n"
 if ! id -nGz "arches" | grep -qzxF "sudo";
@@ -52,23 +68,40 @@ else echo "folder ok"
 fi
 
 # === INSTALL PREREQUISITES ===
-# === === 1) Python and ENV === ===
+# === === 1) Python; Node; and ENV === ===
 echo -e "$BORDER Installing prerequisites \n"
 if ! dpkg-query -W -f='${Status}' virtualenv | grep "ok installed"; then
 
     apt-get update
     apt-get install -y python3-dev python3-virtualenv virtualenv python3-pip \
-                       python3-psycopg2 libpq-dev python-is-python3
+                       python3-psycopg2 libpq-dev python-is-python3 build-essential \
+                       nodejs npm
+
+    # Get a newer python (to enable debugging):
+    add-apt-repository -y ppa:deadsnakes/ppa
+    apt-get update
+    apt-get install -y python${PYTHON_VERSION}-dev python${PYTHON_VERSION} \
+                       python${PYTHON_VERSION}-distutils
+
+    # No: don't mess with system python, you'll break apt...
+    # update-alternatives --install /usr/bin/python python /usr/bin/python$PYTHON_VERSION 1
+    # update-alternatives --install /usr/bin/python3 python3 /usr/bin/python$PYTHON_VERSION 1
 fi
 
 # Provisioner runs as root. Sudo as `arches` user for venv install:
 echo -e "$BORDER Create Virtualenv in /opt/arches \n"
 if ! [[ -x /opt/arches/ENV/bin/python ]]; then
 
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -E -u arches bash <<"EOF"
+        if [ -z "$PYTHON_VERSION" ]; then
+            echo "\$PYTHON_VERSION is not set in environment!"
+            exit 1
+        fi
+
         cd /opt/arches
-        virtualenv --python=/usr/bin/python3 ENV
-        source ENV/bin/activate
+        python${PYTHON_VERSION} -m virtualenv --python=/usr/bin/python${PYTHON_VERSION} ENV
+        source /opt/arches/ENV/bin/activate
+        pip install -U setuptools
 EOF
 else echo "ok"
 fi
@@ -78,25 +111,25 @@ echo -e "$BORDER Install ElasticSearch \n"
 if ! dpkg-query -W -f='${Status}' elasticsearch | grep "ok installed"; then
 
     cd /home/vagrant
-    rm -f ./elasticsearch-8.3.3-amd64.deb # remove if download failed on previous run
-    
     ARCH=`dpkg --print-architecture`
+
+    rm -f ./elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb # remove if download failed on previous run
     
-    if [[ -f /vagrant/arches_install_files/elasticsearch-8.3.3-$ARCH.deb ]]; then
-        echo "Found local elasticsearch-8.3.3-$ARCH.deb"
-        cp -v /vagrant/arches_install_files/elasticsearch-8.3.3-$ARCH.deb ./
+    if [[ -f /vagrant/arches_install_files/elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb ]]; then
+        echo "Found local elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb"
+        cp -v /vagrant/arches_install_files/elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb ./
     else
         # download the deb package
-        echo "Downloading elasticsearch-8.3.3-$ARCH.deb"
+        echo "Downloading elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb"
         wget --no-verbose --show-progress  --progress=dot:mega \
-            "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.3.3-$ARCH.deb" # WD local
+            "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb" # WD local
     fi
 
     # install the deb package
-    dpkg -i ./elasticsearch-8.3.3-$ARCH.deb
+    dpkg -i ./elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb
     # cleanup and don't download again
-    cp -v ./elasticsearch-8.3.3-$ARCH.deb /vagrant/arches_install_files/
-    rm ./elasticsearch-8.3.3-$ARCH.deb
+    cp -v ./elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb /vagrant/arches_install_files/
+    rm ./elasticsearch-$ELASTICSEARCH_VERSION-$ARCH.deb
 else echo "elasticsearch ok"
 fi
 # === === === edit the elasticsearch service file, adding restart on failure === === ===
@@ -134,34 +167,37 @@ fi
 
 # === === 3) Postgres === ===
 echo -e "$BORDER  Installing Postgres"
-if ! dpkg-query -W -f='${Status}' postgresql-14 | grep "ok installed"; then
+if ! dpkg-query -W -f='${Status}' postgresql-${PSQL_VERSION} | grep "ok installed"; then
 
+    # Note: Postgres deprecate support for old ubuntu versions. If hitting a 404 error here, 
+    #       it's likely that the version of Ubuntu we're on is now too old.
     echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
     apt-get update
-    apt-get install -y postgresql-14 postgresql-contrib-14 \
-                       postgresql-14-postgis-3 postgresql-14-postgis-3-scripts
+
+    apt-get install -y postgresql-${PSQL_VERSION} postgresql-contrib-${PSQL_VERSION} \
+                       postgresql-${PSQL_VERSION}-postgis-3 postgresql-${PSQL_VERSION}-postgis-3-scripts
 fi
 
 echo -e "$BORDER  Configuring Postgres"
-if ! grep -E "standard_conforming_strings = off" /etc/postgresql/14/main/postgresql.conf &> /dev/null &&\
-   ! grep -E "#Autoconfiguration done" /etc/postgresql/14/main/pg_hba.conf &> /dev/null; then
+if ! grep -E "standard_conforming_strings = off" /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf &> /dev/null &&\
+   ! grep -E "#Autoconfiguration done" /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf &> /dev/null; then
 
     sudo -u postgres psql -d postgres -c "ALTER USER postgres with encrypted password 'postgis';"
     echo "*:*:*:postgres:postgis" >> ~/.pgpass
 
     chmod 600 ~/.pgpass
-    chmod 666 /etc/postgresql/14/main/postgresql.conf
-    chmod 666 /etc/postgresql/14/main/pg_hba.conf
+    chmod 666 /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf
+    chmod 666 /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
 
-    echo "standard_conforming_strings = off" >> /etc/postgresql/14/main/postgresql.conf
-    echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf
-    echo "#TYPE   DATABASE  USER  CIDR-ADDRESS  METHOD" > /etc/postgresql/14/main/pg_hba.conf
-    echo "local   all       all                 trust" >> /etc/postgresql/14/main/pg_hba.conf
-    echo "host    all       all   127.0.0.1/32  trust" >> /etc/postgresql/14/main/pg_hba.conf
-    echo "host    all       all   ::1/128       trust" >> /etc/postgresql/14/main/pg_hba.conf
-    echo "host    all       all   0.0.0.0/0     md5" >> /etc/postgresql/14/main/pg_hba.conf
-    echo "#Autoconfiguration done" >> /etc/postgresql/14/main/pg_hba.conf
+    echo "standard_conforming_strings = off" >> /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf
+    echo "listen_addresses = '*'" >> /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf
+    echo "#TYPE   DATABASE  USER  CIDR-ADDRESS  METHOD" > /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
+    echo "local   all       all                 trust" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
+    echo "host    all       all   127.0.0.1/32  trust" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
+    echo "host    all       all   ::1/128       trust" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
+    echo "host    all       all   0.0.0.0/0     md5" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
+    echo "#Autoconfiguration done" >> /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf
     
     service postgresql restart
 
@@ -180,28 +216,6 @@ EOF
 
     service postgresql restart
 else echo "ok"
-fi
-
-echo -e "$BORDER  Installing NodeJS; NPM; & Yarn"
-# === === 3) NodeJS, NPM, Yarn === ===
-if ! command -v npm 2>&1 >/dev/null; then
-
-    apt-get install -y nodejs npm
-else echo "npm ok"
-fi
-
-if ! npm list -g --depth=0 | grep 'yarn' 2>&1 >/dev/null; then
-
-    # Install n (node version manager) and set node version to 14.17.6
-    # Then install yarn
-    set -x
-    npm i -g n
-    n 14.17.6
-    hash -r # Reset location of npm and node in shell
-    npm i -g npm@9.6.0
-    npm i -g yarn@1.22.19
-    set +x
-else echo "yarn ok"
 fi
 
 # === === 4) Apache === ===
@@ -250,7 +264,9 @@ fi
 echo -e "$BORDER  Install Arches"
 if ! /opt/arches/ENV/bin/python -m pip show arches >/dev/null; then
 
-    # (moved psycopg2 libpq install to prerequisites)
+    # It is possible to fail provisioning at the arches install step, as pscopg2-binary==2.8.4 
+    #   is required by arches==7.3, but cannot be installed on python >3.9(? - to test exact v).
+    # This may be resolvable on newer Arches - we need to wait for a newer EAMENA version.
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
         python -m pip install "arches==7.3"
@@ -264,7 +280,7 @@ if ! [[ -f /opt/arches/eamena/__init__.py ]]; then
     
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         cd /opt/arches
-        git clone https://github.com/eamena-project/eamena.git
+        git clone --depth=1 https://github.com/eamena-project/eamena.git
 EOF
 else echo "clone ok"
 fi
@@ -333,7 +349,7 @@ if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
     # MAPBOX_API_KEY
     sed -i -E "s/^(MAPBOX_API_KEY)(.*)$/\1 = '$MAPBOX_API_KEY'/" /opt/arches/eamena/eamena/settings_local.py
     # DEBUG
-    sed -i -E "s/^(DEBUG)(.*)$/\1 = '$DEBUG'/" /opt/arches/eamena/eamena/settings_local.py
+    sed -i -E "s/^(DEBUG)(.*)$/\1 = $DEBUG/" /opt/arches/eamena/eamena/settings_local.py
 
     # done
     touch /opt/arches/eamena/.settings_customised
@@ -371,7 +387,6 @@ if ! [[ -f /opt/arches/eamena/.system_settings_loaded ]]; then
         cd /opt/arches/eamena
 
         echo === LOAD THE PACKAGE ===
-        #TODO: Interactive? May need to replace with expect script
         echo "N" | python manage.py packages -o load_package -s /opt/arches/eamena/eamena/pkg/ -db
         # CHOOSE N FOR REWRITE SETTINGS AS Y WILL CREATE A PROBLEMATIC JSON SETTINGS FILE CAUSING AN ERROR AT THE SETTINGS PAGE
         touch /opt/arches/eamena/.system_settings_loaded
@@ -380,8 +395,8 @@ else echo "system_settings loaded"
 fi
 
 # === BUILD DEVELOPMENT FRONTEND ===
-echo -e "$BORDER  Build Development Frontend"
-if ! [[ -d /opt/arches/eamena/eamena/staticfiles ]]; then
+echo -e "$BORDER  Copy Frontend files"
+if ! [[ -d /opt/arches/media ]]; then
 # TODO: test a file inside staticfiles
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
 
@@ -394,7 +409,7 @@ else echo "ok"
 fi
 
 # === === Run Django under Gunicorn (SF) === ===
-# nb: I think we need this first to prevent error: "Error: read ECONNRESET" from `yarn build_development`?
+# We need this first to prevent error: "Error: read ECONNRESET" from `yarn build_development`
 echo -e "$BORDER  Create Gunicorn Service"
 if ! [[ -f /etc/systemd/system/gunicorn.service ]]; then
 
@@ -406,12 +421,28 @@ if ! [[ -f /etc/systemd/system/gunicorn.service ]]; then
 else echo "systemd gunicorn ok"
 fi
 
+echo -e "$BORDER  Installing NodeJS; NPM; & Yarn"
+# === === NodeJS, NPM, Yarn === ===
+if ! npm list -g --depth=0 | grep 'yarn' 2>&1 >/dev/null; then
+
+    # Install n (node version manager) and set node version to $NODE_VERSION
+    # Then install yarn
+    set -x
+    npm i -g n
+    n $NODE_VERSION
+    hash -r # Reset location of npm and node in shell
+    npm i -g npm@${NPM_VERSION}
+    npm i -g yarn@1.22.19
+    set +x
+else echo "yarn ok"
+fi
 
 # === === Install and run files with Yarn === ===
 echo -e "$BORDER  Install and run files with Yarn"
 if ! [[ -f /opt/arches/eamena/eamena/yarn.lock ]]; then
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         # Python ENV is needed by yarn
+        set -e
         source /opt/arches/ENV/bin/activate
 
         cd /opt/arches/eamena/eamena
