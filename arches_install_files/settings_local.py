@@ -148,7 +148,7 @@ LOGGING = {
             'formatter': 'console'
         },
         'console': {
-            'level': 'WARNING',
+            'level': 'DEBUG' if DEBUG else 'WARNING',
             'class': 'logging.StreamHandler',
             'formatter': 'console'
         }
