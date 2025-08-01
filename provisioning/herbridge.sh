@@ -17,7 +17,12 @@ if [ -z "$DEBUG" ] || \
    [ -z "$FRONTEND_AUTH_TOKEN" ] || \
    [ -z "$FRONTEND_AUTH_PASSWORD" ] || \
    [ -z "$EAMENA_TARGET" ] || \
-   [ -z "$SECRET_KEY" ]; 
+   [ -z "$SECRET_KEY" ] || \
+   [ -z "$ARCHES_CLIENT_ID" ] || \
+   [ -z "$ARCHES_CLIENT_SECRET" ] || \
+   [ -z "$POSTGRES_USER" ] || \
+   [ -z "$POSTGRES_PASS" ] || \
+   [ -z "$POSTGRES_DB" ]; 
 then
     echo "Error: One or more required environment variables are not set in provisioning/herbridge.env"
     echo "or, this script is not being run from the root of the git repository!"
@@ -32,8 +37,8 @@ fi
 if [ -z "$INSTALL_PATH"]; then
     export INSTALL_PATH="/opt/arches/HeritageBridge"
 fi
-if [ -z "$SETTINGS_LOCAL_PATH"]; then
-    export SETTINGS_LOCAL_PATH="${INSTALL_PATH}/herbridge/settings_local.py"
+if [ -z "$SETTINGS_FILE"]; then
+    export SETTINGS_FILE="${INSTALL_PATH}/herbridge/settings_local.py"
 fi
 if [ -z "$GIT_REPO"]; then
     export GIT_REPO="https://github.com/DurhamARC/HeritageBridge.git"
@@ -97,25 +102,48 @@ if ! ${INSTALL_PATH}/ENV/bin/python -m pip show gunicorn >/dev/null || \
         source ${INSTALL_PATH}/ENV/bin/activate
         cd ${INSTALL_PATH}
         python -m pip install -r requirements.txt
-        python -m pip install gunicorn
+        python -m pip install gunicorn whitenoise
 EOF
 else echo "herbridge requirements ok"
 fi
 
-# === Install local settings ===
-echo -e "$BORDER  Write local settings file \n"
-if ! [[ -f $SETTINGS_LOCAL_PATH ]]; then 
+# === Install settings_local.py ===
+echo -e "$BORDER  Install settings_local.py \n"
+if ! [[ -f ${SETTINGS_FILE} ]]; then 
     chown -R arches:arches /opt/arches
-    /usr/bin/sudo -EH -u arches ${INSTALL_PATH}/ENV/bin/python <<"EOF"
-import os
-output_file: str = os.getenv('SETTINGS_LOCAL_PATH')
-env_variables = [ 'DEBUG', 'ALLOWED_HOSTS', 'ADMIN_PW_USERNAME', 'ADMIN_PW', 'FRONTEND_AUTH_TOKEN', 'FRONTEND_AUTH_PASSWORD', 'EAMENA_TARGET', 'SECRET_KEY' ]
-with open(output_file, 'w') as f:
-    for v in env_variables:
-        f.write(f"{v}={os.getenv(v)}\n")
-print(f"Wrote {len(env_variables)} vars to {output_file}")
+    /usr/bin/sudo -i --preserve-env=SETTINGS_FILE -u arches bash <<"EOF"
+
+        echo === COPY template settings_local.py ===
+        cp -v /vagrant/arches_install_files/herbridge_settings.py ${SETTINGS_FILE}
 EOF
 else echo "settings_local ok"
+fi
+
+
+# === === Customise settings_local.py === ===
+echo -e "$BORDER  Customise settings_local.py \n"
+if ! grep $SECRET_KEY $SETTINGS_FILE 2>&1 >/dev/null; then
+
+    set -x
+    # Alter variables in settings_local.py to match variables in herbridge.env
+    sed -i -E "s/^(DEBUG)(.*)$/\1 = $DEBUG/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ALLOWED_HOSTS)(.*)$/\1 = $ALLOWED_HOSTS/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ADMIN_PW_USERNAME)(.*)$/\1 = '$ADMIN_PW_USERNAME'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ADMIN_PW)(.*)$/\1 = '$ADMIN_PW'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(FRONTEND_AUTH_TOKEN)(.*)$/\1 = '$FRONTEND_AUTH_TOKEN'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(FRONTEND_AUTH_PASSWORD)(.*)$/\1 = '$FRONTEND_AUTH_PASSWORD'/" ${SETTINGS_FILE}
+    ESCAPED_REPLACE=$(printf '%s\n' "$EAMENA_TARGET" | sed -e 's/[\/&]/\\&/g')
+    sed -i -E "s/^(EAMENA_TARGET)(.*)$/\1 = '$ESCAPED_REPLACE'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ARCHES_CLIENT_ID)(.*)$/\1 = '$ARCHES_CLIENT_ID'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ARCHES_CLIENT_SECRET)(.*)$/\1 = '$ARCHES_CLIENT_SECRET'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(DATABASES\['default'\]\['USER'\])(.*)$/\1 = '$POSTGRES_USER'/" ${SETTINGS_FILE}
+    ESCAPED_REPLACE=$(printf '%s\n' "$POSTGRES_PASS" | sed -e 's/[\/&]/\\&/g')
+    sed -i -E "s/^(DATABASES\['default'\]\['PASSWORD'\])(.*)$/\1 = '$ESCAPED_REPLACE'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(DATABASES\['default'\]\['NAME'\])(.*)$/\1 = '$POSTGRES_DB'/" ${SETTINGS_FILE}
+
+    set +x
+else echo "settings customised ok"
 fi
 
 # === === HeritageBridge Systemd service === ===
