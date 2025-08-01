@@ -1,0 +1,17 @@
+[Unit]
+Description=HeritageBridge Django Gunicorn Service
+After=celery.service
+After=eamena.service
+
+[Service]
+User=arches
+Group=arches
+WorkingDirectory=/opt/arches/HeritageBridge/herbridge
+ExecStart=/opt/arches/HeritageBridge/ENV/bin/gunicorn --workers 3 --timeout=20 --log-file=- --log-level=info --bind=0.0.0.0:5000 herbridge.wsgi
+Environment="PATH=/opt/arches/HeritageBridge/ENV/bin:$PATH"
+Restart=on-failure
+RestartSec=30s
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

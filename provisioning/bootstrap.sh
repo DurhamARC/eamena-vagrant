@@ -531,3 +531,4 @@ else echo "EAMENA v4 is running!"
 fi
 
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
+touch /opt/arches/eamena/.eamena_provisioned

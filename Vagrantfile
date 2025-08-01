@@ -81,6 +81,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 443, host: 443, host_ip: "0.0.0.0"
 
   # WSGI
+  config.vm.network "forwarded_port", guest: 5000, host: 5000, host_ip: "127.0.0.1"
   config.vm.network "forwarded_port", guest: 8000, host: 8000, host_ip: "127.0.0.1"
 
 
@@ -169,4 +170,5 @@ Vagrant.configure("2") do |config|
   #   apt-get install -y apache2
   # SHELL
   config.vm.provision "shell", path: "provisioning/bootstrap.sh"
+  config.vm.provision "shell", path: "provisioning/herbridge.sh"
 end
