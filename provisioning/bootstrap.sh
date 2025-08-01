@@ -7,7 +7,7 @@ export BORDER="\n====================================================\n\n"
 export DEBIAN_FRONTEND=noninteractive 
 export TZ=Etc/UTC
 
-# Import environment from hedap.env:
+# Import environment:
 #export $(awk '''!/^\s*#/''' /vagrant/provisioning/deploy.env | xargs)
 export $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)
 
@@ -32,6 +32,7 @@ then
 fi
 
 # Set optional version number variables if not set:
+# These can be overriden from deploy.env
 if [ -z "$PYTHON_VERSION" ]; then
     export PYTHON_VERSION=3.9
 fi
@@ -84,14 +85,17 @@ if ! dpkg-query -W -f='${Status}' virtualenv | grep "ok installed"; then
     apt-get install -y python3-dev python3-virtualenv virtualenv python3-pip \
                        python3-psycopg2 libpq-dev python-is-python3 build-essential \
                        nodejs npm
+fi
+# Install a newer Python (to enable debugging):
+if ! dpkg-query -W -f='${Status}' python${PYTHON_VERSION} | grep "ok installed"; then
 
-    # Get a newer python (to enable debugging):
     add-apt-repository -y ppa:deadsnakes/ppa
     apt-get update
     apt-get install -y python${PYTHON_VERSION}-dev python${PYTHON_VERSION} \
                        python${PYTHON_VERSION}-distutils
 
-    # No: don't mess with system python, you'll break apt...
+    # Don't mess with system python, you'll break apt...
+    # I've left these lines commented here to warn future maintainers against this!
     # update-alternatives --install /usr/bin/python python /usr/bin/python$PYTHON_VERSION 1
     # update-alternatives --install /usr/bin/python3 python3 /usr/bin/python$PYTHON_VERSION 1
 fi
@@ -250,7 +254,7 @@ if ! [[ -f /etc/apache2/sites-available/arches.conf ]]; then
 else echo "ok"
 fi
 
-# === === RabbitMQ === ===
+# === === 5) RabbitMQ === ===
 echo -e "$BORDER  Install and configure RabbitMQ \n"
 if ! dpkg-query -W -f='${Status}' rabbit | grep "ok installed"; then
 
@@ -260,7 +264,7 @@ fi
 
 # Wait for RabbitMQ to start
 # Fixes: Error: this command requires the 'rabbit' app to be running on the target node. Start it with 'rabbitmqctl start_app'.
-timeout 60 bash -c 'while ! systemctl is-active --quiet rabbitmq-server; do echo "Waiting for RabbitMQ startup..." sleep 5; done'
+timeout 60 bash -c 'while ! systemctl is-active --quiet rabbitmq-server; do echo "Waiting for RabbitMQ startup..."; sleep 5; done'
 
 # Check user setup of 'arches' in RabbitMQ
 if ! rabbitmqctl list_users | grep 'arches'; then
@@ -274,7 +278,7 @@ if ! rabbitmqctl list_users | grep 'arches'; then
 fi
 
 
-# === INSTALL ARCHES ===
+# === 6) INSTALL ARCHES ===
 echo -e "$BORDER  Install Arches \n"
 if ! /opt/arches/ENV/bin/python -m pip show arches >/dev/null; then
 
@@ -313,8 +317,8 @@ EOF
 else echo "requirements ok"
 fi
 
-# === === 5) Celery === ===
-echo -e "$BORDER  Create Celery Service \n"
+# === === Celery service === ===
+echo -e "$BORDER  Create Arches Celery Service \n"
 if ! [[ -f /etc/systemd/system/celery.service ]]; then
 
     cp -v /vagrant/config/celery.service /etc/systemd/system/celery.service
@@ -325,8 +329,8 @@ if ! [[ -f /etc/systemd/system/celery.service ]]; then
 else echo "systemd celery ok"
 fi
 
-# === 7) Move files ===
-echo -e "$BORDER  Move files into place \n"
+# === Install settings_local.py ===
+echo -e "$BORDER  Install settings_local.py \n"
 if ! [[ -f /opt/arches/eamena/eamena/settings_local.py ]]; then 
     chown -R arches:arches /opt/arches
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
@@ -337,7 +341,7 @@ EOF
 else echo "settings_local ok"
 fi
 
-# === === 6) Customise settings_local.py === ===
+# === === Customise settings_local.py === ===
 echo -e "$BORDER  Customise settings_local.py \n"
 if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
 
@@ -428,6 +432,8 @@ echo -e "$BORDER  Create EAMENA Gunicorn Service \n"
 if ! [[ -f /etc/systemd/system/eamena.service ]]; then
 
     cp -v /vagrant/config/eamena.service /etc/systemd/system/eamena.service
+    chmod +x /etc/systemd/system/eamena.service
+
     # can now start eamena
     systemctl enable eamena
     systemctl start eamena
@@ -524,9 +530,4 @@ if ! curl -sL localhost:80 | grep "EAMENA v4" >/dev/null; then
 else echo "EAMENA v4 is running!"
 fi
 
-
-# === === Set up HeritageBridge === ===
-
-
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
-
