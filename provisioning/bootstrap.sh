@@ -422,17 +422,17 @@ EOF
 else echo "ok"
 fi
 
-# === === Run Django under Gunicorn (SF) === ===
+# === === Run EAMENA under Gunicorn === ===
 # We need this first to prevent error: "Error: read ECONNRESET" from `yarn build_development`
-echo -e "$BORDER  Create Gunicorn Service \n"
-if ! [[ -f /etc/systemd/system/gunicorn.service ]]; then
+echo -e "$BORDER  Create EAMENA Gunicorn Service \n"
+if ! [[ -f /etc/systemd/system/eamena.service ]]; then
 
-    cp -v /vagrant/config/gunicorn.service /etc/systemd/system/gunicorn.service
-    # can now start gunicorn
-    systemctl enable gunicorn
-    systemctl start gunicorn
-    systemctl status gunicorn
-else echo "systemd gunicorn ok"
+    cp -v /vagrant/config/eamena.service /etc/systemd/system/eamena.service
+    # can now start eamena
+    systemctl enable eamena
+    systemctl start eamena
+    systemctl status eamena
+else echo "EAMENA installed into systemd ok"
 fi
 
 echo -e "$BORDER  Installing NodeJS; NPM; & Yarn \n"
@@ -515,9 +515,18 @@ fi
 # else echo "ok"
 # fi
 
-# Final tests
-systemctl restart apache2
-curl -sL localhost:80 | grep "EAMENA v4" >/dev/null && echo "EAMENA v4 is running!"
+# Final tests for EAMENA
+if ! curl -sL localhost:80 | grep "EAMENA v4" >/dev/null; then
+    echo "EAMENA doesn't seem to be running. Something went wrong." >&2
+    echo "Use \`vagrant ssh\` to log in and examine the system." >&2
+    echo "Then, re-run this script using \`vagrant up --provision\`" >&2
+    exit 1
+else echo "EAMENA v4 is running!"
+fi
+
+
+# === === Set up HeritageBridge === ===
+
 
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
 
