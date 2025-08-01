@@ -160,6 +160,18 @@ EOF
 else echo "postgres herbridge user ok"
 fi
 
+# === === Run herbridge django migrations === ===
+if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrations | grep '\[ \]'; then
+    # Create extension postgis as a superuser for specific herbridge database
+    sudo -u postgres psql -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
+        source ${INSTALL_PATH}/ENV/bin/activate
+        cd ${INSTALL_PATH}/herbridge
+        python manage.py migrate
+EOF
+else echo "herbridge migrations ok"
+fi
+
 # === === HeritageBridge Systemd service === ===
 echo -e "$BORDER  Create HerBridge Systemd Service \n"
 if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
