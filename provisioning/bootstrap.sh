@@ -47,6 +47,9 @@ if [ -z "$NODE_VERSION" ]; then
     export NPM_VERSION=10.9.3
     # prev: 14.17.6; 9.6.0
 fi
+if [ -z "$SETTINGS_FILE"]; then
+    export SETTINGS_FILE="/opt/arches/eamena/eamena/settings_local.py"
+fi
 
 # === create an arches user ===
 echo -e "$BORDER Creating Arches user and folder \n"
@@ -331,46 +334,36 @@ fi
 
 # === Install settings_local.py ===
 echo -e "$BORDER  Install settings_local.py \n"
-if ! [[ -f /opt/arches/eamena/eamena/settings_local.py ]]; then 
+if ! [[ -f ${SETTINGS_FILE} ]]; then 
     chown -R arches:arches /opt/arches
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py INTO THE PROJECT FOLDER ===
-        cp -v /vagrant/arches_install_files/settings_local.py /opt/arches/eamena/eamena/settings_local.py 
+        cp -v /vagrant/arches_install_files/settings_local.py ${SETTINGS_FILE}
 EOF
 else echo "settings_local ok"
 fi
 
 # === === Customise settings_local.py === ===
 echo -e "$BORDER  Customise settings_local.py \n"
-if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
+if ! grep $SECRET_KEY ${SETTINGS_FILE} 2>&1 >/dev/null; then
 
     set -x
     # Alter passwords in settings_local.py to match variables in deploy.env
     # test using `export $(awk '''!/^\s*#/''' /vagrant/provisioning/deploy.env | xargs)`
-    # CELERY_BROKER_URL
     ESCAPED_REPLACE=$(printf '%s\n' "$CELERY_BROKER_URL" | sed -e 's/[\/&]/\\&/g')
-    sed -i -E "s/^(CELERY_BROKER_URL)(.*)$/\1 = '$ESCAPED_REPLACE'/" /opt/arches/eamena/eamena/settings_local.py
-    # ALLOWED_HOSTS
-    sed -i -E "s/^(ALLOWED_HOSTS)(.*)$/\1 = $ALLOWED_HOSTS/" /opt/arches/eamena/eamena/settings_local.py
-    # EMAIL_HOST_USER
-    sed -i -E "s/^(EMAIL_HOST_USER)(.*)$/\1 = '$EMAIL_HOST_USER'/" /opt/arches/eamena/eamena/settings_local.py
-    # EMAIL_FROM_ADDRESS
-    sed -i -E "s/^(EMAIL_FROM_ADDRESS)(.*)$/\1 = '$EMAIL_FROM_ADDRESS'/" /opt/arches/eamena/eamena/settings_local.py
-    # EMAIL_HOST_PASSWORD
-    sed -i -E "s/^(EMAIL_HOST_PASSWORD)(.*)$/\1 = '$EMAIL_HOST_PASSWORD'/" /opt/arches/eamena/eamena/settings_local.py
-    # ARCHES_NAMESPACE_FOR_DATA_EXPORT
+    sed -i -E "s/^(CELERY_BROKER_URL)(.*)$/\1 = '$ESCAPED_REPLACE'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ALLOWED_HOSTS)(.*)$/\1 = $ALLOWED_HOSTS/" ${SETTINGS_FILE}
+    sed -i -E "s/^(EMAIL_HOST_USER)(.*)$/\1 = '$EMAIL_HOST_USER'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(EMAIL_FROM_ADDRESS)(.*)$/\1 = '$EMAIL_FROM_ADDRESS'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(EMAIL_HOST_PASSWORD)(.*)$/\1 = '$EMAIL_HOST_PASSWORD'/" ${SETTINGS_FILE}
     ESCAPED_REPLACE=$(printf '%s\n' "$ARCHES_NAMESPACE_FOR_DATA_EXPORT" | sed -e 's/[\/&]/\\&/g')
-    sed -i -E "s/^(ARCHES_NAMESPACE_FOR_DATA_EXPORT)(.*)$/\1 = '$ESCAPED_REPLACE'/" /opt/arches/eamena/eamena/settings_local.py
-    # SECRET_KEY
-    sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" /opt/arches/eamena/eamena/settings_local.py
-    # MAPBOX_API_KEY
-    sed -i -E "s/^(MAPBOX_API_KEY)(.*)$/\1 = '$MAPBOX_API_KEY'/" /opt/arches/eamena/eamena/settings_local.py
-    # DEBUG
-    sed -i -E "s/^(DEBUG)(.*)$/\1 = $DEBUG/" /opt/arches/eamena/eamena/settings_local.py
+    sed -i -E "s/^(ARCHES_NAMESPACE_FOR_DATA_EXPORT)(.*)$/\1 = '$ESCAPED_REPLACE'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(MAPBOX_API_KEY)(.*)$/\1 = '$MAPBOX_API_KEY'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(DEBUG)(.*)$/\1 = $DEBUG/" ${SETTINGS_FILE}
 
     # done
-    touch /opt/arches/eamena/.settings_customised
     set +x
 else echo "settings customised ok"
 fi
