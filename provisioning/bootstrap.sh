@@ -51,6 +51,8 @@ fi
 echo -e "$BORDER Creating Arches user and folder \n"
 if ! id -nGz "arches" | grep -qzxF "sudo";
 then
+    # Bonus: set users' shells to bash
+    usermod -s $(which bash) vagrant
     useradd -m -s $(which bash) -d /opt/arches arches
     usermod -aG sudo,vagrant,www-data arches
     echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
@@ -59,6 +61,7 @@ then
         # If we've set a password in deploy.env, use it for arches:
         echo "arches:${ARCHES_PASSWORD}" | chpasswd
     fi
+    
     echo "User created"
 else echo "user ok"
 fi
@@ -146,7 +149,7 @@ else echo "elasticsearch service ok"
 fi
 
 # === === === edit the elasticsearch configuration file, replacing security settings === === ===
-echo -e "$BORDER  Performing configuration changes for elasticsearch.yml"
+echo -e "$BORDER  Performing configuration changes for elasticsearch.yml \n"
 if ! grep -E "xpack\.security\.enabled: false" /etc/elasticsearch/elasticsearch.yml &> /dev/null; then
 
     # xpack.security.enabled: false
@@ -171,7 +174,7 @@ else echo "ok"
 fi
 
 # === === 3) Postgres === ===
-echo -e "$BORDER  Installing Postgres"
+echo -e "$BORDER  Installing Postgres \n"
 if ! dpkg-query -W -f='${Status}' postgresql-${PSQL_VERSION} | grep "ok installed"; then
 
     # Note: Postgres deprecate support for old ubuntu versions. If hitting a 404 error here, 
@@ -184,7 +187,7 @@ if ! dpkg-query -W -f='${Status}' postgresql-${PSQL_VERSION} | grep "ok installe
                        postgresql-${PSQL_VERSION}-postgis-3 postgresql-${PSQL_VERSION}-postgis-3-scripts
 fi
 
-echo -e "$BORDER  Configuring Postgres"
+echo -e "$BORDER  Configuring Postgres \n"
 if ! grep -E "standard_conforming_strings = off" /etc/postgresql/${PSQL_VERSION}/main/postgresql.conf &> /dev/null &&\
    ! grep -E "#Autoconfiguration done" /etc/postgresql/${PSQL_VERSION}/main/pg_hba.conf &> /dev/null; then
 
@@ -224,7 +227,7 @@ else echo "ok"
 fi
 
 # === === 4) Apache === ===
-echo -e "$BORDER  Install apache2 and modules"
+echo -e "$BORDER  Install apache2 and modules \n"
 if ! dpkg-query -W -f='${Status}' apache2 | grep "ok installed"; then
 
     apt-get install -y apache2 libapache2-mod-wsgi-py3
@@ -247,13 +250,19 @@ if ! [[ -f /etc/apache2/sites-available/arches.conf ]]; then
 else echo "ok"
 fi
 
-# === === Celery === ===
-echo -e "$BORDER  Install and configure RabbitMQ"
+# === === RabbitMQ === ===
+echo -e "$BORDER  Install and configure RabbitMQ \n"
 if ! dpkg-query -W -f='${Status}' rabbit | grep "ok installed"; then
 
     apt-get install -y rabbitmq-server rabbit
     rabbitmqctl add_vhost arches
 fi
+
+# Wait for RabbitMQ to start
+# Fixes: Error: this command requires the 'rabbit' app to be running on the target node. Start it with 'rabbitmqctl start_app'.
+timeout 60 bash -c 'while ! systemctl is-active --quiet rabbitmq-server; do echo "Waiting for RabbitMQ startup..." sleep 5; done'
+
+# Check user setup of 'arches' in RabbitMQ
 if ! rabbitmqctl list_users | grep 'arches'; then
 
     # Echo password into add_user
@@ -266,7 +275,7 @@ fi
 
 
 # === INSTALL ARCHES ===
-echo -e "$BORDER  Install Arches"
+echo -e "$BORDER  Install Arches \n"
 if ! /opt/arches/ENV/bin/python -m pip show arches >/dev/null; then
 
     # It is possible to fail provisioning at the arches install step, as pscopg2-binary==2.8.4 
@@ -280,7 +289,7 @@ else echo "ok"
 fi
 
 # === CLONE EAMENA GIT PROJECT/PACKAGE ===
-echo -e "$BORDER  Clone EAMENA"
+echo -e "$BORDER  Clone EAMENA \n"
 if ! [[ -f /opt/arches/eamena/__init__.py ]]; then
     
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
@@ -291,7 +300,7 @@ else echo "clone ok"
 fi
 
 # === === Install Python requirements === ===
-echo -e "$BORDER  Install Python requirements"
+echo -e "$BORDER  Install Python requirements \n"
 if ! /opt/arches/ENV/bin/python -m pip show gunicorn >/dev/null; then
 
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
@@ -305,7 +314,7 @@ else echo "requirements ok"
 fi
 
 # === === 5) Celery === ===
-echo -e "$BORDER  Create Celery Service"
+echo -e "$BORDER  Create Celery Service \n"
 if ! [[ -f /etc/systemd/system/celery.service ]]; then
 
     cp -v /vagrant/config/celery.service /etc/systemd/system/celery.service
@@ -317,7 +326,7 @@ else echo "systemd celery ok"
 fi
 
 # === 7) Move files ===
-echo -e "$BORDER  Move files into place"
+echo -e "$BORDER  Move files into place \n"
 if ! [[ -f /opt/arches/eamena/eamena/settings_local.py ]]; then 
     chown -R arches:arches /opt/arches
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
@@ -329,7 +338,7 @@ else echo "settings_local ok"
 fi
 
 # === === 6) Customise settings_local.py === ===
-echo -e "$BORDER  Customise settings_local.py"
+echo -e "$BORDER  Customise settings_local.py \n"
 if ! [[ -f /opt/arches/eamena/.settings_customised ]]; then
 
     set -x
@@ -363,7 +372,7 @@ else echo "settings customised ok"
 fi
 
 # === === System Settings === ===
-echo -e "$BORDER  Convert and Load System Settings"
+echo -e "$BORDER  Convert and Load System Settings \n"
 if ! [[ -d /opt/arches/eamena/eamena/system_settings ]]; then 
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
@@ -400,7 +409,7 @@ else echo "system_settings loaded"
 fi
 
 # === BUILD DEVELOPMENT FRONTEND ===
-echo -e "$BORDER  Copy Frontend files"
+echo -e "$BORDER  Copy Frontend files \n"
 if ! [[ -d /opt/arches/media ]]; then
 # TODO: test a file inside staticfiles
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
@@ -415,7 +424,7 @@ fi
 
 # === === Run Django under Gunicorn (SF) === ===
 # We need this first to prevent error: "Error: read ECONNRESET" from `yarn build_development`
-echo -e "$BORDER  Create Gunicorn Service"
+echo -e "$BORDER  Create Gunicorn Service \n"
 if ! [[ -f /etc/systemd/system/gunicorn.service ]]; then
 
     cp -v /vagrant/config/gunicorn.service /etc/systemd/system/gunicorn.service
@@ -426,7 +435,7 @@ if ! [[ -f /etc/systemd/system/gunicorn.service ]]; then
 else echo "systemd gunicorn ok"
 fi
 
-echo -e "$BORDER  Installing NodeJS; NPM; & Yarn"
+echo -e "$BORDER  Installing NodeJS; NPM; & Yarn \n"
 # === === NodeJS, NPM, Yarn === ===
 if ! npm list -g --depth=0 | grep 'yarn' 2>&1 >/dev/null; then
 
@@ -443,7 +452,7 @@ else echo "yarn ok"
 fi
 
 # === === Install and run files with Yarn === ===
-echo -e "$BORDER  Install and run files with Yarn"
+echo -e "$BORDER  Install and run files with Yarn \n"
 if ! [[ -f /opt/arches/eamena/eamena/yarn.lock ]]; then
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         # Python ENV is needed by yarn
@@ -460,7 +469,7 @@ else echo "yarn ok"
 fi
 
 # === === Load grids === ===
-echo -e "$BORDER  Load grids"
+echo -e "$BORDER  Load grids \n"
 if ! [[ -f /opt/arches/eamena/.grids_loaded ]]; then
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
