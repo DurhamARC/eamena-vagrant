@@ -76,7 +76,6 @@ MIDDLEWARE = [
 
 # Use Whitenoise for serving static files in the absence of S3...
 MIDDLEWARE.extend([
-    "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ])
 
