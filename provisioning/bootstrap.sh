@@ -280,6 +280,16 @@ if ! rabbitmqctl list_users | grep 'arches'; then
     systemctl status rabbitmq-server
 fi
 
+# === CLONE EAMENA GIT PROJECT/PACKAGE ===
+echo -e "$BORDER  Clone EAMENA \n"
+if ! [[ -f /opt/arches/eamena/__init__.py ]]; then
+    
+    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+        cd /opt/arches
+        git clone --depth=1 https://github.com/eamena-project/eamena.git
+EOF
+else echo "clone ok"
+fi
 
 # === 6) INSTALL ARCHES ===
 echo -e "$BORDER  Install Arches \n"
@@ -293,17 +303,6 @@ if ! /opt/arches/ENV/bin/python -m pip show arches >/dev/null; then
         python -m pip install "arches==7.3"
 EOF
 else echo "ok"
-fi
-
-# === CLONE EAMENA GIT PROJECT/PACKAGE ===
-echo -e "$BORDER  Clone EAMENA \n"
-if ! [[ -f /opt/arches/eamena/__init__.py ]]; then
-    
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
-        cd /opt/arches
-        git clone --depth=1 https://github.com/eamena-project/eamena.git
-EOF
-else echo "clone ok"
 fi
 
 # === === Install Python requirements === ===
@@ -336,7 +335,7 @@ fi
 echo -e "$BORDER  Install settings_local.py \n"
 if ! [[ -f ${SETTINGS_FILE} ]]; then 
     chown -R arches:arches /opt/arches
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py INTO THE PROJECT FOLDER ===
         cp -v /vagrant/arches_install_files/settings_local.py ${SETTINGS_FILE}
@@ -514,13 +513,19 @@ fi
 # else echo "ok"
 # fi
 
+timeout 60 bash -c 'while ! systemctl is-active --quiet eamena; do echo "Waiting for EAMENA startup..."; sleep 5; done'
+
 # Final tests for EAMENA
 if ! curl -sL localhost:80 | grep "EAMENA v4" >/dev/null; then
-    echo "EAMENA doesn't seem to be running. Something went wrong." >&2
-    echo "Use \`vagrant ssh\` to log in and examine the system." >&2
-    echo "Then, re-run this script using \`vagrant up --provision\`" >&2
+    echo -e "EAMENA doesn't seem to be running. Something went wrong." >&2
+    echo -e "Use \`vagrant ssh\` to log in and examine the system." >&2
+    echo -e "\nUseful commands:" >&2
+    echo -e "    sudo systemctl status apache2" >&2
+    echo -e "    sudo systemctl status eamena" >&2
+    echo -e "    sudo journalctl -exu eamena" >&2
+    echo -e "\nThen, re-run this script using \`vagrant up --provision\`" >&2
     exit 1
-else echo "EAMENA v4 is running!"
+else echo -e "\nEAMENA v4 is running!"
 fi
 
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
