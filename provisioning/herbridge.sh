@@ -146,6 +146,20 @@ if ! grep $SECRET_KEY $SETTINGS_FILE 2>&1 >/dev/null; then
 else echo "settings customised ok"
 fi
 
+# === === Create database credentials === ===
+echo -e "$BORDER  Create Postgres database and user for HerBridge \n"
+if ! PGPASSWORD="$POSTGRES_PASS" psql -h localhost -U "$POSTGRES_USER" -d $POSTGRES_DB -c '\q' >/dev/null 2>&1; then
+
+    # Create user
+    /usr/bin/sudo -E -u postgres bash <<"EOF"
+        createuser -h localhost -p 5432 -U postgres $POSTGRES_USER
+        psql -d postgres -c "ALTER USER $POSTGRES_USER with encrypted password '$POSTGRES_PASS';"
+        createdb -h localhost -p 5432 -U postgres $POSTRES_USER $POSTGRES_DB
+        psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;"
+EOF
+else echo "postgres herbridge user ok"
+fi
+
 # === === HeritageBridge Systemd service === ===
 echo -e "$BORDER  Create HerBridge Systemd Service \n"
 if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
