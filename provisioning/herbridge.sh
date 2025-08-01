@@ -38,7 +38,7 @@ if [ -z "$INSTALL_PATH"]; then
     export INSTALL_PATH="/opt/arches/HeritageBridge"
 fi
 if [ -z "$SETTINGS_FILE"]; then
-    export SETTINGS_FILE="${INSTALL_PATH}/herbridge/settings_local.py"
+    export SETTINGS_FILE="${INSTALL_PATH}/herbridge/herbridge/local_settings.py"
 fi
 if [ -z "$GIT_REPO"]; then
     export GIT_REPO="https://github.com/DurhamARC/HeritageBridge.git"
@@ -108,7 +108,7 @@ else echo "herbridge requirements ok"
 fi
 
 # === Install settings_local.py ===
-echo -e "$BORDER  Install settings_local.py \n"
+echo -e "$BORDER  Install local Django settings \n"
 if ! [[ -f ${SETTINGS_FILE} ]]; then 
     chown -R arches:arches /opt/arches
     /usr/bin/sudo -i --preserve-env=SETTINGS_FILE -u arches bash <<"EOF"
@@ -121,7 +121,7 @@ fi
 
 
 # === === Customise settings_local.py === ===
-echo -e "$BORDER  Customise settings_local.py \n"
+echo -e "$BORDER  Customise local Django settings \n"
 if ! grep $SECRET_KEY $SETTINGS_FILE 2>&1 >/dev/null; then
 
     set -x

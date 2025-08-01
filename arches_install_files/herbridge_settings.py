@@ -80,19 +80,22 @@ MIDDLEWARE.extend([
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ])
 
-STATIC_ROOT = os.path.join(BASE_DIR, "/frontend/static")
-
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "frontend/static")
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'WARNING',  # DEBUG, INFO, WARNING, ERROR
             'class': 'logging.FileHandler',
-            'filename': os.path.join('/var/log', 'herbridge.log'),
-            'maxBytes': 1024*1024*15, # 15MB
-            'backupCount': 10,
+            'filename': os.path.join(BASE_DIR, 'herbridge.log'),
             'formatter': 'console'
         },
         'console': {
@@ -103,7 +106,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['applogfile'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
