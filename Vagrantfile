@@ -137,12 +137,12 @@ Vagrant.configure("2") do |config|
       config.vbguest.auto_update = false
 
       # Configure virtual memory allocation
-      vb.memory = 8192
+      vb.memory = 10240
       vb.cpus = 2
 
-      # ubuntu/focal64 image currently suffering from a bug which makes it slow to boot.
-      # Work-around described at https://askubuntu.com/questions/1243582 
-      vb.customize [ "modifyvm", :id, "--uartmode1", "file", File::NULL ]
+      # If the above doesn't apply, use customise:
+      vb.customize ["modifyvm", :id, "--memory", "10240"]
+      vb.customize ["modifyvm", :id, "--cpus", "2"]
 
       # Configure disk size using the plugin vagrant-disksize.
       # This is installed using vagrant plugin install vagrant-disksize
@@ -156,8 +156,8 @@ Vagrant.configure("2") do |config|
       # Set VM properties for UTM
       override.vm.box = "utm/ubuntu-24.04"
       utm.name = "debian_vm"
-      utm.memory = 8192   # 8GB memory
-      utm.cpus = 4          # 4 CPUs
+      utm.memory = 10240   # 10GB memory
+      utm.cpus = 2          # 4 CPUs
       utm.directory_share_mode = "virtFS"
       #utm.directory_share_mode = "webDAV"  # Use webDAV for manual directory sharing
   end
