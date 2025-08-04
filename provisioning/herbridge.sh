@@ -29,6 +29,12 @@ then
     exit 1
 fi
 
+if [ -z "$NODE_VERSION" ]; then
+    export NVM_VERSION=0.40.3
+    export NODE_VERSION=14.21.3
+    export NPM_VERSION=8.14.0
+fi
+
 # Set optional version number variables if not set:
 # These can be overriden from deploy.env
 if [ -z "$PYTHON_VERSION" ]; then
@@ -70,7 +76,7 @@ if ! [[ -f ${INSTALL_PATH}/herbridge/manage.py ]]; then
     
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         # ${INSTALL_PATH} must be empty!
-        git clone --depth=1 ${GIT_REPO} ${INSTALL_PATH}
+        git clone --single-branch --branch arches-update --depth=1 ${GIT_REPO} ${INSTALL_PATH}
 EOF
 else echo "clone ok"
 fi
@@ -196,6 +202,58 @@ if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
 else echo "systemd herbridge ok"
 fi
 
+
+# === === Install nvm: node version manager === ===
+echo -e "$BORDER  Installing NVM; Node; NPM; *locally* as 'arches' user\n"
+if ! [[ -d /opt/arches/.nvm ]]; then
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
+        cd
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh | bash
+        # nvm should pick up $NODE_VERSION automagically
+EOF
+fi
+
+echo "ElasticSearch eats RAM. Stopping it while we build node_modules..."
+systemctl stop elasticsearch
+
+# === === Install node as local arches user === ===
+/usr/bin/sudo -EH -u arches bash <<"EOF"
+    set -e
+    export NVM_DIR=$HOME/.nvm;
+    source $NVM_DIR/nvm.sh;
+    export PATH="$HOME/node_modules/.bin:$PATH"
+    cd $HOME
+
+    echo "node is $(node --version) at $(which node). Want ${NODE_VERSION}."
+    echo "npm is $(npm --version) at $(which npm). Want ${NPM_VERSION}."
+    
+    # Node version update should not be required as nvm installs it, but to be safe...
+    if ! node --version | grep "${NODE_VERSION}" >/dev/null 2>&1; then
+        echo "node is the wrong version. Installing locally..."
+        nvm i ${NODE_VERSION}
+    fi
+
+    if ! npm --version | grep "${NPM_VERSION}" >/dev/null 2>&1; then
+        echo "npm is the wrong version. Installing locally..."
+        npm install npm@${NPM_VERSION}
+        echo npm is now $(npm --version)
+    fi
+
+    if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/node_modules ]]; then
+        echo "Installing local node modules"
+        cd ${INSTALL_PATH}/herbridge/frontend
+        npm i
+        # runs npm run prod as postinstall script
+    else
+        echo "Node modules built. Remove ${INSTALL_PATH}/herbridge/frontend/node_modules to rebuild"
+    fi
+EOF
+
+
+# === === Restart ElasticSearch. === ===
+# Nom nom nom 5GB RAM... 
+echo "Restarting elasticsearch..."
+systemctl start elasticsearch
 
 # Mark completed
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
