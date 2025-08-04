@@ -172,6 +172,16 @@ EOF
 else echo "herbridge migrations ok"
 fi
 
+
+# === === Setup herbridge logfile === ===
+echo -e "$BORDER  Create and set permissions on logfile \n"
+if [ ! "$(stat -c '%U' "${INSTALL_PATH}/herbridge/herbridge.log")" = "arches" ]; then
+    touch ${INSTALL_PATH}/herbridge/herbridge.log
+    chmod -v +x ${INSTALL_PATH}/herbridge/herbridge.log
+    chown -v arches:arches ${INSTALL_PATH}/herbridge/herbridge.log
+else echo "logfile OK"
+fi
+
 # === === HeritageBridge Systemd service === ===
 echo -e "$BORDER  Create HerBridge Systemd Service \n"
 if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
@@ -187,5 +197,6 @@ else echo "systemd herbridge ok"
 fi
 
 
+# Mark completed
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
 touch ${INSTALL_PATH}/.herbridge_provisioned
