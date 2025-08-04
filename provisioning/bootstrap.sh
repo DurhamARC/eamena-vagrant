@@ -436,7 +436,7 @@ fi
 
 echo -e "$BORDER  Installing NodeJS; NPM; & Yarn \n"
 # === === NodeJS, NPM, Yarn === ===
-pkgs() { npm list -g --depth=0 2>&1 >/dev/null; }
+pkgs() { npm list -g --depth=0; }
 if ! node --version | grep "${NODE_VERSION}" || 
    ! pkgs | grep "npm@${NPM_VERSION}" ||
    ! pkgs | grep "yarn@${YARN_VERSION}"; then
@@ -450,7 +450,7 @@ if ! node --version | grep "${NODE_VERSION}" ||
     npm i -g npm@${NPM_VERSION}
     npm i -g yarn@${YARN_VERSION}
     set +x
-else echo "yarn ok"
+else echo "node/npm/yarn ok"
 fi
 
 # === === Install and run files with Yarn === ===
