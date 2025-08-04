@@ -45,7 +45,8 @@ fi
 if [ -z "$NODE_VERSION" ]; then
     export NODE_VERSION=20.19.4
     export NPM_VERSION=10.9.3
-    # prev: 14.17.6; 9.6.0
+    export YARN_VERSION=1.22.19
+    # prev: 14.17.6; 9.6.0; 1.22.19
 fi
 if [ -z "$SETTINGS_FILE"]; then
     export SETTINGS_FILE="/opt/arches/eamena/eamena/settings_local.py"
@@ -435,7 +436,10 @@ fi
 
 echo -e "$BORDER  Installing NodeJS; NPM; & Yarn \n"
 # === === NodeJS, NPM, Yarn === ===
-if ! npm list -g --depth=0 | grep 'yarn' 2>&1 >/dev/null; then
+pkgs() { npm list -g --depth=0 2>&1 >/dev/null; }
+if ! node --version | grep "${NODE_VERSION}" || 
+   ! pkgs | grep "npm@${NPM_VERSION}" ||
+   ! pkgs | grep "yarn@${YARN_VERSION}"; then
 
     # Install n (node version manager) and set node version to $NODE_VERSION
     # Then install yarn
@@ -444,7 +448,7 @@ if ! npm list -g --depth=0 | grep 'yarn' 2>&1 >/dev/null; then
     n $NODE_VERSION
     hash -r # Reset location of npm and node in shell
     npm i -g npm@${NPM_VERSION}
-    npm i -g yarn@1.22.19
+    npm i -g yarn@${YARN_VERSION}
     set +x
 else echo "yarn ok"
 fi
