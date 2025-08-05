@@ -113,7 +113,7 @@ fi
 echo -e "$BORDER Create Virtualenv in /opt/arches \n"
 if ! [[ -x /opt/arches/ENV/bin/python ]]; then
 
-    /usr/bin/sudo -E -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         if [ -z "$PYTHON_VERSION" ]; then
             echo "\$PYTHON_VERSION is not set in environment!"
             exit 1
@@ -222,7 +222,7 @@ if ! grep -E "standard_conforming_strings = off" /etc/postgresql/${PSQL_VERSION}
     
     service postgresql restart
 
-    /usr/bin/sudo -i --preserve-env=BORDER -u postgres bash <<"EOF"
+    /usr/bin/sudo -EH -u postgres bash <<"EOF"
         psql -d postgres -c "CREATE EXTENSION postgis;"
         createdb -E UTF8 -T template0 --locale=en_US.utf8 template_postgis # I had to change the locale to C.utf* after running locale -a
         psql -d postgres -c "UPDATE pg_database SET datistemplate='true' WHERE datname='template_postgis'"
@@ -290,7 +290,7 @@ fi
 echo -e "$BORDER  Clone EAMENA \n"
 if ! [[ -f /opt/arches/eamena/__init__.py ]]; then
     
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         cd /opt/arches
         git clone --depth=1 https://github.com/eamena-project/eamena.git
 EOF
@@ -301,7 +301,7 @@ fi
 echo -e "$BORDER  Install Arches and EAMENA Python requirements \n"
 if ! /opt/arches/ENV/bin/python -m pip show gunicorn >/dev/null; then
 
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
         cd /opt/arches/eamena
         python -m pip install "arches==7.3"    # Still required? It's in requirements.txt...
@@ -363,7 +363,7 @@ fi
 # === === System Settings === ===
 echo -e "$BORDER  Convert and Load System Settings \n"
 if ! [[ -d /opt/arches/eamena/eamena/system_settings ]]; then 
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
 
         echo === DELETE ALL BUSINESS DATA ===
@@ -401,7 +401,7 @@ fi
 echo -e "$BORDER  Copy Frontend files \n"
 if ! [[ -d /opt/arches/media ]]; then
 # TODO: test a file inside staticfiles
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
 
         # download and extract media.tar to /opt/arches/media
         echo "Extracting media.tar.gz to /opt/arches/media"
@@ -448,7 +448,7 @@ fi
 # === === Install and run files with Yarn === ===
 echo -e "$BORDER  Install and run files with Yarn \n"
 if ! [[ -f /opt/arches/eamena/eamena/yarn.lock ]]; then
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         # Python ENV is needed by yarn
         set -e
         source /opt/arches/ENV/bin/activate
@@ -465,7 +465,7 @@ fi
 # === === Load grids === ===
 echo -e "$BORDER  Load grids \n"
 if ! [[ -f /opt/arches/eamena/.grids_loaded ]]; then
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
 
         # === FIX DEFAULT VALUES ERROR ===
