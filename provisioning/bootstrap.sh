@@ -24,6 +24,7 @@ if [ -z "$RABBITMQ_PASSWORD" ] || \
    [ -z "$EMAIL_FROM_ADDRESS" ] || \
    [ -z "$EMAIL_HOST_PASSWORD" ] || \
    [ -z "$ARCHES_NAMESPACE_FOR_DATA_EXPORT" ] || \
+   [ -z "$MAPBOX_API_KEY" ] || \
    [ -z "$SECRET_KEY" ]; 
 then
     echo "Error: One or more required environment variables are not set in provisioning/deploy.env"
@@ -50,6 +51,9 @@ if [ -z "$NODE_VERSION" ]; then
 fi
 if [ -z "$SETTINGS_FILE"]; then
     export SETTINGS_FILE="/opt/arches/eamena/eamena/settings_local.py"
+fi
+if [ -z "$DEBUG"]; then
+    export DEBUG=False
 fi
 
 # === create an arches user ===
