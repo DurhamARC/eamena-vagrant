@@ -62,7 +62,7 @@ then
     usermod -aG sudo,vagrant,www-data arches
     echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> /opt/arches/.bashrc
 
-    if [ -z "$ARCHES_PASSWORD" ]; then
+    if ! [ -z "$ARCHES_PASSWORD" ]; then
         # If we've set a password in deploy.env, use it for arches:
         echo "Updating user password for arches"
         echo "arches:${ARCHES_PASSWORD}" | chpasswd
