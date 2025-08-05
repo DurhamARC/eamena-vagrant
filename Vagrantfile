@@ -1,11 +1,10 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-
 #
 # This is a multi-provider vagrantfile which contains configs for Virtualbox
-# and UTM (e.g. on M1 Mac). To run with a specific provider:
-#
-#   vagrant up --provision --provider="virtualbox"
+# and UTM (e.g. on M1 Mac). It uses virtualbox by default.
+# To run with a specific provider:
+#   export VAGRANT_DEFAULT_PROVIDER="utm"
 # or:
 #   vagrant up --provision --provider="utm"
 #
@@ -13,20 +12,22 @@ ENV['VAGRANT_DEFAULT_PROVIDER'] ||= "virtualbox"
 
 # Check for required plugins only when using specific providers
 if ARGV.include?('--provider=utm') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 'utm'
+  provider = "utm"
   unless Vagrant.has_plugin?("vagrant_utm")
     raise Vagrant::Errors::VagrantError.new, "vagrant_utm plugin missing. Run 'vagrant plugin install vagrant_utm'."
   end
 end
 
 if ARGV.include?('--provider=virtualbox') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 'virtualbox'
+  provider = "virtualbox"
   # Install vagrant-vbguest to update guest additions on box launch
   unless Vagrant.has_plugin?("vagrant-vbguest")
       raise  Vagrant::Errors::VagrantError.new, "vagrant-vbguest plugin missing. Run 'vagrant plugin install vagrant-vbguest'."
   end
-end
-
-unless Vagrant.has_plugin?("vagrant-disksize")
+  # Vagrant-disksize is a virtualbox provider plugin
+  unless Vagrant.has_plugin?("vagrant-disksize")
     raise  Vagrant::Errors::VagrantError.new, "vagrant-disksize plugin missing. Run 'vagrant plugin install vagrant-disksize'."
+  end
 end
 
 
@@ -109,14 +110,13 @@ Vagrant.configure("2") do |config|
   #config.vm.synced_folder "postgres-data", "/usr/local/pgsql/data"
   #config.vm.synced_folder "opt-arches", "/opt/arches", mount_options: ["dmode=775,fmode=777"]
 
-  # Set disk size
-  config.disksize.size = '20GB'
-
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  config.vm.provider "virtualbox" do |vb|
+
+  if provider == "virtualbox"
+    config.vm.provider "virtualbox" do |vb|
       # View the documentation for the provider you are using for more
       # information on available options.
       # Install vagrant-disksize to allow resizing the vagrant box disk.
@@ -136,9 +136,10 @@ Vagrant.configure("2") do |config|
       # additions version when booting this machine
       config.vbguest.auto_update = false
 
-      # Configure virtual memory allocation
+      # Configure virtual machine
       vb.memory = 10240
       vb.cpus = 2
+      config.disksize.size = '20GB'
 
       # If the above doesn't apply, use customise:
       vb.customize ["modifyvm", :id, "--memory", "10240"]
@@ -148,10 +149,12 @@ Vagrant.configure("2") do |config|
       # This is installed using vagrant plugin install vagrant-disksize
       #
       #config.disksize.size = '10GB'
+    end
   end
 
-  # Custom configuration for utm
-  config.vm.provider "utm" do |utm, override|
+  if provider == "utm"
+    config.vm.provider "utm" do |utm, override|
+      # Custom configuration for utm
 
       # Set VM properties for UTM
       override.vm.box = "utm/ubuntu-24.04"
@@ -160,6 +163,7 @@ Vagrant.configure("2") do |config|
       utm.cpus = 2          # 4 CPUs
       utm.directory_share_mode = "virtFS"
       #utm.directory_share_mode = "webDAV"  # Use webDAV for manual directory sharing
+    end
   end
 
   # Enable provisioning with a shell script. Additional provisioners such as
