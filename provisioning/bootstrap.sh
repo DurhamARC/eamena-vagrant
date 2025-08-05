@@ -64,6 +64,7 @@ then
 
     if [ -z "$ARCHES_PASSWORD" ]; then
         # If we've set a password in deploy.env, use it for arches:
+        echo "Updating user password for arches"
         echo "arches:${ARCHES_PASSWORD}" | chpasswd
     fi
     
