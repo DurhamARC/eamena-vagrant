@@ -38,6 +38,8 @@ FRONTEND_AUTH_PASSWORD = '<a password for access to this instance>'
 FRONTEND_AUTH_TOKEN = '<a cookie for users who are logged in>'
 EAMENA_TARGET = '<an eamena installation as a target>'
 
+ARCHES_USERNAME = '<arches app user with permission to generate Oauth token>'
+ARCHES_PASSWORD = '<password for that user>'
 ARCHES_CLIENT_ID = '<arches app client ID>'
 ARCHES_CLIENT_SECRET = '<arches app oauth secret>'
 
