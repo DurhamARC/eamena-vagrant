@@ -10,14 +10,15 @@ export TZ=Etc/UTC
 export $(grep -v '^#' /vagrant/provisioning/herbridge.env | xargs)
 
 # Check if required environment variables are set
-if [ -z "$DEBUG" ] || \
-   [ -z "$ALLOWED_HOSTS" ] || \
+if [ -z "$ALLOWED_HOSTS" ] || \
    [ -z "$ADMIN_PW_USERNAME" ] || \
    [ -z "$ADMIN_PW" ] || \
    [ -z "$FRONTEND_AUTH_TOKEN" ] || \
    [ -z "$FRONTEND_AUTH_PASSWORD" ] || \
    [ -z "$EAMENA_TARGET" ] || \
    [ -z "$SECRET_KEY" ] || \
+   [ -z "$ARCHES_USERNAME" ] || \
+   [ -z "$ARCHES_PASSWORD" ] || \
    [ -z "$ARCHES_CLIENT_ID" ] || \
    [ -z "$ARCHES_CLIENT_SECRET" ] || \
    [ -z "$POSTGRES_USER" ] || \
@@ -29,30 +30,28 @@ then
     exit 1
 fi
 
+# Set optional version number variables if not set:
+# These can be overriden from deploy.env
+if [ -z "$DEBUG" ] || \
+    export DEBUG=False
+fi
 if [ -z "$NODE_VERSION" ]; then
     export NVM_VERSION=0.40.3
     export NODE_VERSION=14.21.3
     export NPM_VERSION=8.14.0
 fi
-
-# Set optional version number variables if not set:
-# These can be overriden from deploy.env
 if [ -z "$PYTHON_VERSION" ]; then
     export PYTHON_VERSION=3.9
 fi
-echo PYTHON_VERSION is $PYTHON_VERSION
 if [ -z "$INSTALL_PATH"]; then
     export INSTALL_PATH="/opt/arches/HeritageBridge"
 fi
-echo INSTALL_PATH is $INSTALL_PATH
 if [ -z "$SETTINGS_FILE"]; then
     export SETTINGS_FILE="${INSTALL_PATH}/herbridge/herbridge/local_settings.py"
 fi
-echo SETTINGS_FILE is $SETTINGS_FILE
 if [ -z "$GIT_REPO"]; then
     export GIT_REPO="https://github.com/DurhamARC/HeritageBridge.git"
 fi
-echo GIT_REPO is $GIT_REPO
 
 
 echo -e "\n<><><><><><><><><><><> INSTALL HERITAGEBRIDGE <><><><><><><><><><><>\n"
