@@ -8,7 +8,11 @@
 # or:
 #   vagrant up --provision --provider="utm"
 #
-ENV['VAGRANT_DEFAULT_PROVIDER'] ||= "virtualbox"
+if Vagrant::Util::Platform::darwin?
+  ENV['VAGRANT_DEFAULT_PROVIDER'] ||= "utm"
+else
+  ENV['VAGRANT_DEFAULT_PROVIDER'] ||= "virtualbox"
+end
 
 # Check for required plugins only when using specific providers
 if ARGV.include?('--provider=utm') || ENV['VAGRANT_DEFAULT_PROVIDER'] == 'utm'
