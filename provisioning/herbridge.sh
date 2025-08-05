@@ -40,15 +40,19 @@ fi
 if [ -z "$PYTHON_VERSION" ]; then
     export PYTHON_VERSION=3.9
 fi
+echo PYTHON_VERSION is $PYTHON_VERSION
 if [ -z "$INSTALL_PATH"]; then
     export INSTALL_PATH="/opt/arches/HeritageBridge"
 fi
+echo INSTALL_PATH is $INSTALL_PATH
 if [ -z "$SETTINGS_FILE"]; then
     export SETTINGS_FILE="${INSTALL_PATH}/herbridge/herbridge/local_settings.py"
 fi
+echo SETTINGS_FILE is $SETTINGS_FILE
 if [ -z "$GIT_REPO"]; then
     export GIT_REPO="https://github.com/DurhamARC/HeritageBridge.git"
 fi
+echo GIT_REPO is $GIT_REPO
 
 
 echo -e "\n<><><><><><><><><><><> INSTALL HERITAGEBRIDGE <><><><><><><><><><><>\n"
@@ -116,7 +120,6 @@ fi
 # === Install settings_local.py ===
 echo -e "$BORDER  Install local Django settings \n"
 if ! [[ -f ${SETTINGS_FILE} ]]; then 
-    chown -R arches:arches /opt/arches
     /usr/bin/sudo -i --preserve-env=SETTINGS_FILE -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py ===
