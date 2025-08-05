@@ -157,7 +157,7 @@ echo -e "$BORDER  Create Postgres database and user for HerBridge \n"
 if ! PGPASSWORD="$POSTGRES_PASS" psql -h localhost -U "$POSTGRES_USER" -d $POSTGRES_DB -c '\q' >/dev/null 2>&1; then
 
     # Create user
-    /usr/bin/sudo -E -u postgres bash <<"EOF"
+    /usr/bin/sudo -EH -u postgres bash <<"EOF"
         createuser -h localhost -p 5432 -U postgres $POSTGRES_USER
         psql -d postgres -c "ALTER USER $POSTGRES_USER with encrypted password '$POSTGRES_PASS';"
         createdb -h localhost -p 5432 -U postgres $POSTRES_USER $POSTGRES_DB
@@ -166,19 +166,6 @@ EOF
 else echo "postgres herbridge user ok"
 fi
 
-# === === Run herbridge django migrations === ===
-if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrations | grep '\[ \]'; then
-    # Create extension postgis as a superuser for specific herbridge database
-    sudo -u postgres psql -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-    /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/herbridge
-        python manage.py migrate
-EOF
-else echo "herbridge migrations ok"
-fi
-
-
 # === === Setup herbridge logfile === ===
 echo -e "$BORDER  Create and set permissions on logfile \n"
 if [ ! "$(stat -c '%U' "${INSTALL_PATH}/herbridge/herbridge.log")" = "arches" ]; then
@@ -186,6 +173,20 @@ if [ ! "$(stat -c '%U' "${INSTALL_PATH}/herbridge/herbridge.log")" = "arches" ];
     chmod -v +x ${INSTALL_PATH}/herbridge/herbridge.log
     chown -v arches:arches ${INSTALL_PATH}/herbridge/herbridge.log
 else echo "logfile OK"
+fi
+
+# === === Run herbridge django migrations === ===
+echo -e "$BORDER  Run migrations if required. Available migrations: \n"
+if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrations | grep '\[ \]'; then
+    # Create extension postgis as a superuser for specific herbridge database
+    sudo -u postgres psql -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
+        source ${INSTALL_PATH}/ENV/bin/activate
+        echo "Run migrations"
+        cd ${INSTALL_PATH}/herbridge
+        python manage.py migrate
+EOF
+else echo "herbridge migrations ok"
 fi
 
 # === === HeritageBridge Systemd service === ===
