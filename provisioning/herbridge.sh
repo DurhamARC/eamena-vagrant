@@ -144,8 +144,8 @@ if ! grep $SECRET_KEY $SETTINGS_FILE 2>&1 >/dev/null; then
     ESCAPED_REPLACE=$(printf '%s\n' "$EAMENA_TARGET" | sed -e 's/[\/&]/\\&/g')
     sed -i -E "s/^(EAMENA_TARGET)(.*)$/\1 = '$ESCAPED_REPLACE'/" ${SETTINGS_FILE}
     sed -i -E "s/^(SECRET_KEY)(.*)$/\1 = '$SECRET_KEY'/" ${SETTINGS_FILE}
-    sed -i -E "s/^(ARCHES_USERNAME)(.*)$/\1 = '$ARCHES_CLIENT_ID'/" ${SETTINGS_FILE}
-    sed -i -E "s/^(ARCHES_PASSWORD)(.*)$/\1 = '$ARCHES_CLIENT_SECRET'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ARCHES_USERNAME)(.*)$/\1 = '$ARCHES_USERNAME'/" ${SETTINGS_FILE}
+    sed -i -E "s/^(ARCHES_PASSWORD)(.*)$/\1 = '$ARCHES_PASSWORD'/" ${SETTINGS_FILE}
     sed -i -E "s/^(ARCHES_CLIENT_ID)(.*)$/\1 = '$ARCHES_CLIENT_ID'/" ${SETTINGS_FILE}
     sed -i -E "s/^(ARCHES_CLIENT_SECRET)(.*)$/\1 = '$ARCHES_CLIENT_SECRET'/" ${SETTINGS_FILE}
     sed -i -E "s/^(DATABASES\['default'\]\['USER'\])(.*)$/\1 = '$POSTGRES_USER'/" ${SETTINGS_FILE}
