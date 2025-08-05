@@ -205,19 +205,18 @@ fi
 
 
 # === === Install nvm: node version manager === ===
-echo -e "$BORDER  Installing NVM; Node; NPM; *locally* as 'arches' user\n"
+echo -e "$BORDER  Installing NVM\n"
 if ! [[ -d /opt/arches/.nvm ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         cd
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh | bash
         # nvm should pick up $NODE_VERSION automagically
 EOF
+else echo "~/.nvm exists ok"
 fi
 
-echo "ElasticSearch eats RAM. Stopping it while we build node_modules..."
-systemctl stop elasticsearch
-
 # === === Install node as local arches user === ===
+echo -e "$BORDER  Installing Node; NPM; *locally* as 'arches' user"
 /usr/bin/sudo -EH -u arches bash <<"EOF"
     set -e
     export NVM_DIR=$HOME/.nvm;
@@ -239,20 +238,45 @@ systemctl stop elasticsearch
         npm install npm@${NPM_VERSION}
         echo npm is now $(npm --version)
     fi
-
-    if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/node_modules ]]; then
-        echo "Installing local node modules"
-        cd ${INSTALL_PATH}/herbridge/frontend
-        npm i
-        # runs npm run prod as postinstall script
-    else
-        echo "Node modules built. Remove ${INSTALL_PATH}/herbridge/frontend/node_modules to rebuild"
-    fi
 EOF
 
+# === === Install node_modules for HeritageBridge === ===
+echo -e "$BORDER  Installing node_modules for HeritageBridge"
+if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/node_modules ]]; then
 
-# === === Restart ElasticSearch. === ===
-# Nom nom nom 5GB RAM... 
+    echo "ElasticSearch eats RAM. Stopping it while we build node_modules..."
+    systemctl stop elasticsearch
+
+    /usr/bin/sudo -EH -u arches bash <<"EOF" ||
+        set -e
+        export NVM_DIR=$HOME/.nvm;
+        source $NVM_DIR/nvm.sh;
+        export PATH="$HOME/node_modules/.bin:$PATH"
+        cd $HOME
+
+        if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/node_modules ]]; then
+            echo "Installing local node modules"
+            cd ${INSTALL_PATH}/herbridge/frontend
+            npm i
+            # already runs npm run prod as postinstall script
+        else
+            echo "Node modules built. Remove ${INSTALL_PATH}/herbridge/frontend/node_modules to rebuild"
+        fi
+
+        echo -e "$BORDER  Building development scripts"
+        if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/static/frontend/frontend_dev.js ]]; then
+            # Run dev appears to hang until Ctrl+C. Kill it after 120s using timeout:
+            timeout 120 npm run dev
+        else echo "frontend_dev.js found ok"
+        fi
+EOF
+    echo "Restarting elasticsearch..." || \
+    systemctl start elasticsearch
+    # ^^ Restart ElasticSearch even on failure
+    # Nom nom nom 5GB RAM... 
+else echo "herbridge/frontend/node_modules ok!"
+fi
+
 echo "Restarting elasticsearch..."
 systemctl start elasticsearch
 
