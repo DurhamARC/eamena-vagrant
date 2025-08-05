@@ -189,20 +189,6 @@ EOF
 else echo "herbridge migrations ok"
 fi
 
-# === === HeritageBridge Systemd service === ===
-echo -e "$BORDER  Create HerBridge Systemd Service \n"
-if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
-
-    cp -v /vagrant/config/herbridge.service /etc/systemd/system/herbridge.service
-    chmod +x /etc/systemd/system/herbridge.service
-
-    # can now start celery
-    systemctl enable herbridge
-    systemctl start herbridge
-    systemctl status herbridge
-else echo "systemd herbridge ok"
-fi
-
 
 # === === Install nvm: node version manager === ===
 echo -e "$BORDER  Installing NVM\n"
@@ -277,8 +263,19 @@ EOF
 else echo "herbridge/frontend/node_modules ok!"
 fi
 
-echo "Restarting elasticsearch..."
-systemctl start elasticsearch
+# === === HeritageBridge Systemd service === ===
+echo -e "$BORDER  Create HerBridge Systemd Service \n"
+if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
+
+    cp -v /vagrant/config/herbridge.service /etc/systemd/system/herbridge.service
+    chmod +x /etc/systemd/system/herbridge.service
+
+    # can now start celery
+    systemctl enable herbridge
+    systemctl start herbridge
+    systemctl status herbridge
+else echo "systemd herbridge ok"
+fi
 
 # Mark completed
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
