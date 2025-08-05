@@ -292,27 +292,14 @@ EOF
 else echo "clone ok"
 fi
 
-# === 6) INSTALL ARCHES ===
-echo -e "$BORDER  Install Arches \n"
-if ! /opt/arches/ENV/bin/python -m pip show arches >/dev/null; then
-
-    # It is possible to fail provisioning at the arches install step, as pscopg2-binary==2.8.4 
-    #   is required by arches==7.3, but cannot be installed on python >3.9(? - to test exact v).
-    # This may be resolvable on newer Arches - we need to wait for a newer EAMENA version.
-    /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
-        source /opt/arches/ENV/bin/activate
-        python -m pip install "arches==7.3"
-EOF
-else echo "ok"
-fi
-
-# === === Install Python requirements === ===
-echo -e "$BORDER  Install Python requirements \n"
+# === 6) INSTALL ARCHES/EAMENA ===
+echo -e "$BORDER  Install Arches and EAMENA Python requirements \n"
 if ! /opt/arches/ENV/bin/python -m pip show gunicorn >/dev/null; then
 
     /usr/bin/sudo -i --preserve-env=BORDER -u arches bash <<"EOF"
         source /opt/arches/ENV/bin/activate
         cd /opt/arches/eamena
+        python -m pip install "arches==7.3"    # Still required? It's in requirements.txt...
         python -m pip install -r requirements.txt
         python -m pip install geomet gunicorn
         echo -e "source /opt/arches/ENV/bin/activate" >> /opt/arches/.bashrc
