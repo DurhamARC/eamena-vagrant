@@ -474,10 +474,6 @@ if ! [[ -f /opt/arches/eamena/.grids_loaded ]]; then
         python manage.py packages -o import_business_data -s /vagrant/arches_install_files/GS.csv -ow overwrite
         python manage.py es reindex_database
 
-        # == CREATE SUPERUSER ==
-        # Uses the DJANGO_* credentials in the deploy.env file
-        python manage.py createsuperuser --no-input
-
         # === === Test it works using the backend === ===
         # upload a known working BU template (file.xlsx)
         # TODO: add file.xlsx to /vagrant
@@ -486,6 +482,36 @@ if ! [[ -f /opt/arches/eamena/.grids_loaded ]]; then
         touch /opt/arches/eamena/.grids_loaded
 EOF
 else echo "grids ok"
+fi
+
+# === === Create superusers === ===
+echo -e "$BORDER  Create EAMENA superusers \n"
+if ! [[ -f /opt/arches/eamena/eamena/management/commands/list_users.py ]]; then
+    cp -v /vagrant/config/django_commands/*.py /opt/arches/eamena/eamena/management/commands
+    chown --no-dereference arches:arches /opt/arches/eamena/eamena/management/commands/*.py
+else echo "management scripts ok"
+fi 
+
+if ! [[ -z "${DJANGO_SUPERUSER_LIST}" ]]; then
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
+        source /opt/arches/ENV/bin/activate
+        cd /opt/arches/eamena
+
+        FIRST_USER=$(echo $DJANGO_SUPERUSER_LIST | cut -f1 -d':')
+        USERS="$(python manage.py list_users 2>/dev/null)"
+        echo -e "available users: $USERS"
+
+        if ! echo $USERS | grep $FIRST_USER; then
+            echo "Creating users..."
+            DJANGO_GROUPS="$(python manage.py list_groups 2>/dev/null)"
+            DJANGO_PERMISSIONS="$(python manage.py list_permissions 2>/dev/null)"
+            echo "Groups available: $DJANGO_GROUPS"
+            echo "Permissions available: ${DJANGO_PERMISSIONS:0:30}... [truncated length ${#DJANGO_PERMISSIONS} total]"
+            python manage.py make_superusers "${DJANGO_SUPERUSER_LIST}" "${DJANGO_GROUPS}" "${DJANGO_PERMISSIONS}"
+            python manage.py clear_perm_cache
+        fi
+EOF
+else echo "environment does not define \$DJANGO_SUPERUSER_LIST, nothing to do."
 fi
 
 # ==

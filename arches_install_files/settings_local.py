@@ -224,14 +224,13 @@ CELERY_BEAT_SCHEDULE = {
 # way of monitoring celery so you can detect the background task not being available.
 CELERY_CHECK_ONLY_INSPECT_BROKER = False
 
-CANTALOUPE_DIR = os.path.join(ROOT_DIR, "uploadedfiles")
-CANTALOUPE_HTTP_ENDPOINT = "http://localhost:8182/"
+# CANTALOUPE_DIR = os.path.join(APP_ROOT, "uploadedfiles")
+# CANTALOUPE_HTTP_ENDPOINT = "http://localhost:8182/"
+
 # By setting RESTRICT_CELERY_EXPORT_FOR_ANONYMOUS_USER to True, if the user is attempting
 # to export search results above the SEARCH_EXPORT_IMMEDIATE_DOWNLOAD_THRESHOLD
 # value and is not signed in with a user account then the request will not be allowed.
 RESTRICT_CELERY_EXPORT_FOR_ANONYMOUS_USER = False
-
-CELERY_CHECK_ONLY_INSPECT_BROKER = False
 
 TILESERVER_URL = ''
 
