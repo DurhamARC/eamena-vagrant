@@ -34,8 +34,8 @@ fi
 
 # Set optional version number variables if not set:
 # These can be overriden from deploy.env
-if [ -z "$INSTALL_PATH"]; then
-    export INSTALL_PATH="/opt/arches"
+if [ -z "$ARCHES_ROOT"]; then
+    export ARCHES_ROOT="/opt/arches"
 fi
 if [ -z "$PYTHON_VERSION" ]; then
     export PYTHON_VERSION=3.9
@@ -53,7 +53,7 @@ if [ -z "$NODE_VERSION" ]; then
     # prev: 14.17.6; 9.6.0; 1.22.19
 fi
 if [ -z "$SETTINGS_FILE"]; then
-    export SETTINGS_FILE="${INSTALL_PATH}/eamena/eamena/settings_local.py"
+    export SETTINGS_FILE="${ARCHES_ROOT}/eamena/eamena/settings_local.py"
 fi
 if [ -z "$DEBUG"]; then
     export DEBUG=False
@@ -65,9 +65,9 @@ if ! id -nGz "arches" | grep -qzxF "sudo";
 then
     # Bonus: set users' shells to bash
     usermod -s $(which bash) vagrant
-    useradd -m -s $(which bash) -d ${INSTALL_PATH} arches
+    useradd -m -s $(which bash) -d ${ARCHES_ROOT} arches
     usermod -aG sudo,vagrant,www-data arches
-    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> ${INSTALL_PATH}/.bashrc
+    echo -e '\nexport $(grep -v '^#' /vagrant/provisioning/deploy.env | xargs)' >> ${ARCHES_ROOT}/.bashrc
 
     if ! [ -z "$ARCHES_PASSWORD" ]; then
         # If we've set a password in deploy.env, use it for arches:
@@ -81,19 +81,19 @@ fi
 
 # === make an arches folder in /opt ====
 echo -e "$BORDER Create Arches Folder \n"
-if ! [[ -d ${INSTALL_PATH} ]]; then 
+if ! [[ -d ${ARCHES_ROOT} ]]; then 
 
-    mkdir -pv ${INSTALL_PATH}
-    chown arches:arches ${INSTALL_PATH}
+    mkdir -pv ${ARCHES_ROOT}
+    chown arches:arches ${ARCHES_ROOT}
 else echo "folder ok"
 fi
 
 if grep '#AuthorizedKeysFile' /etc/ssh/sshd_config || \
-   ! [[ -f ${INSTALL_PATH}/.ssh/authorized_keys ]]; then
-    mkdir -p ${INSTALL_PATH}/.ssh
-    touch ${INSTALL_PATH}/.ssh/authorized_keys
-    chown -R arches:arches ${INSTALL_PATH}/.ssh
-    chmod 600 ${INSTALL_PATH}/.ssh/authorized_keys
+   ! [[ -f ${ARCHES_ROOT}/.ssh/authorized_keys ]]; then
+    mkdir -p ${ARCHES_ROOT}/.ssh
+    touch ${ARCHES_ROOT}/.ssh/authorized_keys
+    chown -R arches:arches ${ARCHES_ROOT}/.ssh
+    chmod 600 ${ARCHES_ROOT}/.ssh/authorized_keys
 
     # Update /etc/ssh/sshd_config to allow pubkey auth
     sed -i '/PubkeyAuthentication/s/^#//g' /etc/ssh/sshd_config
@@ -127,8 +127,8 @@ if ! dpkg-query -W -f='${Status}' python${PYTHON_VERSION} | grep "ok installed";
 fi
 
 # Provisioner runs as root. Sudo as `arches` user for venv install:
-echo -e "$BORDER Create Virtualenv in ${INSTALL_PATH} \n"
-if ! [[ -x ${INSTALL_PATH}/ENV/bin/python ]]; then
+echo -e "$BORDER Create Virtualenv in ${ARCHES_ROOT} \n"
+if ! [[ -x ${ARCHES_ROOT}/ENV/bin/python ]]; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         if [ -z "$PYTHON_VERSION" ]; then
@@ -136,9 +136,9 @@ if ! [[ -x ${INSTALL_PATH}/ENV/bin/python ]]; then
             exit 1
         fi
 
-        cd ${INSTALL_PATH}
+        cd ${ARCHES_ROOT}
         python${PYTHON_VERSION} -m virtualenv --python=/usr/bin/python${PYTHON_VERSION} ENV
-        source ${INSTALL_PATH}/ENV/bin/activate
+        source ${ARCHES_ROOT}/ENV/bin/activate
         pip install -U setuptools
 EOF
 else echo "ok"
@@ -305,10 +305,10 @@ fi
 
 # === CLONE EAMENA GIT PROJECT/PACKAGE ===
 echo -e "$BORDER  Clone EAMENA \n"
-if ! [[ -f ${INSTALL_PATH}/eamena/__init__.py ]]; then
+if ! [[ -f ${ARCHES_ROOT}/eamena/__init__.py ]]; then
     
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        cd ${INSTALL_PATH}
+        cd ${ARCHES_ROOT}
         git clone --depth=1 https://github.com/eamena-project/eamena.git
 EOF
 else echo "clone ok"
@@ -316,16 +316,16 @@ fi
 
 # === 6) INSTALL ARCHES/EAMENA ===
 echo -e "$BORDER  Install Arches and EAMENA Python requirements \n"
-if ! ${INSTALL_PATH}/ENV/bin/python -m pip show gunicorn >/dev/null; then
+if ! ${ARCHES_ROOT}/ENV/bin/python -m pip show gunicorn >/dev/null; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
 
         python -m pip install "arches==7.3"    # Still required? It's in requirements.txt...
         python -m pip install -r requirements.txt
         python -m pip install geomet gunicorn
-        echo -e "source ${INSTALL_PATH}/ENV/bin/activate" >> ${INSTALL_PATH}/.bashrc
+        echo -e "source ${ARCHES_ROOT}/ENV/bin/activate" >> ${ARCHES_ROOT}/.bashrc
 EOF
 else echo "requirements ok"
 fi
@@ -345,7 +345,7 @@ fi
 # === Install settings_local.py ===
 echo -e "$BORDER  Install settings_local.py \n"
 if ! [[ -f ${SETTINGS_FILE} ]]; then 
-    chown -R arches:arches ${INSTALL_PATH}
+    chown -R arches:arches ${ARCHES_ROOT}
     /usr/bin/sudo -EH -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py INTO THE PROJECT FOLDER ===
@@ -380,51 +380,51 @@ fi
 
 # === === System Settings === ===
 echo -e "$BORDER  Convert and Load System Settings \n"
-if ! [[ -d ${INSTALL_PATH}/eamena/eamena/system_settings ]]; then 
+if ! [[ -d ${ARCHES_ROOT}/eamena/eamena/system_settings ]]; then 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
 
         echo === DELETE ALL BUSINESS DATA ===
-        rm -v ${INSTALL_PATH}/eamena/eamena/pkg/business_data/files/*
+        rm -v ${ARCHES_ROOT}/eamena/eamena/pkg/business_data/files/*
 
         echo === MOVE THE CONVERTED System_Settings.json file INTO THE PROJECT SYSTEM SETTINGS FOLDER ===
 
-        python manage.py convert_json_57 -s ${INSTALL_PATH}/eamena/eamena/pkg/system_settings/System_Settings.json \
-                        > ${INSTALL_PATH}/eamena/eamena/pkg/system_settings/System_Settings_conv.json
+        python manage.py convert_json_57 -s ${ARCHES_ROOT}/eamena/eamena/pkg/system_settings/System_Settings.json \
+                        > ${ARCHES_ROOT}/eamena/eamena/pkg/system_settings/System_Settings_conv.json
 
-        rm -v ${INSTALL_PATH}/eamena/eamena/pkg/system_settings/System_Settings.json
-        mkdir -v ${INSTALL_PATH}/eamena/eamena/system_settings
-        mv -v ${INSTALL_PATH}/eamena/eamena/pkg/system_settings/System_Settings_conv.json ${INSTALL_PATH}/eamena/eamena/system_settings/System_Settings.json
-        rm -v ${INSTALL_PATH}/eamena/eamena/system_settings/pkg/system_settings/System_Settings_conv.json
-        cp -v ${INSTALL_PATH}/eamena/eamena/system_settings/System_Settings.json ${INSTALL_PATH}/eamena/eamena/pkg/system_settings/System_Settings.json
+        rm -v ${ARCHES_ROOT}/eamena/eamena/pkg/system_settings/System_Settings.json
+        mkdir -v ${ARCHES_ROOT}/eamena/eamena/system_settings
+        mv -v ${ARCHES_ROOT}/eamena/eamena/pkg/system_settings/System_Settings_conv.json ${ARCHES_ROOT}/eamena/eamena/system_settings/System_Settings.json
+        rm -v ${ARCHES_ROOT}/eamena/eamena/system_settings/pkg/system_settings/System_Settings_conv.json
+        cp -v ${ARCHES_ROOT}/eamena/eamena/system_settings/System_Settings.json ${ARCHES_ROOT}/eamena/eamena/pkg/system_settings/System_Settings.json
 EOF
 else echo "system_settings ok"
 fi
 
-if ! [[ -f ${INSTALL_PATH}/eamena/.system_settings_loaded ]]; then
+if ! [[ -f ${ARCHES_ROOT}/eamena/.system_settings_loaded ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
 
         echo === LOAD THE PACKAGE ===
-        echo "N" | python manage.py packages -o load_package -s ${INSTALL_PATH}/eamena/eamena/pkg/ -db
+        echo "N" | python manage.py packages -o load_package -s ${ARCHES_ROOT}/eamena/eamena/pkg/ -db
         # CHOOSE N FOR REWRITE SETTINGS AS Y WILL CREATE A PROBLEMATIC JSON SETTINGS FILE CAUSING AN ERROR AT THE SETTINGS PAGE
-        touch ${INSTALL_PATH}/eamena/.system_settings_loaded
+        touch ${ARCHES_ROOT}/eamena/.system_settings_loaded
 EOF
 else echo "system_settings loaded"
 fi
 
 # === BUILD DEVELOPMENT FRONTEND ===
 echo -e "$BORDER  Copy Frontend files \n"
-if ! [[ -d ${INSTALL_PATH}/media ]]; then
+if ! [[ -d ${ARCHES_ROOT}/media ]]; then
 # TODO: test a file inside staticfiles
     /usr/bin/sudo -EH -u arches bash <<"EOF"
 
-        # download and extract media.tar to ${INSTALL_PATH}/media
-        echo "Extracting media.tar.gz to ${INSTALL_PATH}/media"
-        mkdir -p ${INSTALL_PATH}/files ${INSTALL_PATH}/media
-        tar -xf /vagrant/arches_install_files/media.tar.gz -C ${INSTALL_PATH}/media
+        # download and extract media.tar to ${ARCHES_ROOT}/media
+        echo "Extracting media.tar.gz to ${ARCHES_ROOT}/media"
+        mkdir -p ${ARCHES_ROOT}/files ${ARCHES_ROOT}/media
+        tar -xf /vagrant/arches_install_files/media.tar.gz -C ${ARCHES_ROOT}/media
 EOF
 else echo "ok"
 fi
@@ -465,27 +465,27 @@ fi
 
 # === === Install and run files with Yarn === ===
 echo -e "$BORDER  Install and run files with Yarn \n"
-if ! [[ -f ${INSTALL_PATH}/eamena/eamena/yarn.lock ]]; then
+if ! [[ -f ${ARCHES_ROOT}/eamena/eamena/yarn.lock ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         # Python ENV is needed by yarn
         set -e
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena/eamena
 
-        cp -v /vagrant/arches_install_files/package.json ${INSTALL_PATH}/eamena/eamena/package.json
+        cp -v /vagrant/arches_install_files/package.json ${ARCHES_ROOT}/eamena/eamena/package.json
         yarn --non-interactive install
         echo "=== BUILD DEVELOPMENT ==="
-        yarn --non-interactive build_development || rm ${INSTALL_PATH}/eamena/eamena/yarn.lock
+        yarn --non-interactive build_development || rm ${ARCHES_ROOT}/eamena/eamena/yarn.lock
 EOF
 else echo "yarn ok"
 fi
 
 # === === Load grids === ===
 echo -e "$BORDER  Load grids \n"
-if ! [[ -f ${INSTALL_PATH}/eamena/.grids_loaded ]]; then
+if ! [[ -f ${ARCHES_ROOT}/eamena/.grids_loaded ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
 
         # === FIX DEFAULT VALUES ERROR ===
         #python manage.py migrate # ALREADY DONE IN LOAD THE PACKAGE
@@ -499,25 +499,25 @@ if ! [[ -f ${INSTALL_PATH}/eamena/.grids_loaded ]]; then
         # === === Test it works using the backend === ===
         # upload a known working BU template (file.xlsx)
         # TODO: add file.xlsx to /vagrant
-        #python ${INSTALL_PATH}/eamena/manage.py bu -w strict -o validate -g 34cfe98e-c2c0-11ea-9026-02e7594ce0a0 -s file.xlsx
+        #python ${ARCHES_ROOT}/eamena/manage.py bu -w strict -o validate -g 34cfe98e-c2c0-11ea-9026-02e7594ce0a0 -s file.xlsx
 
-        touch ${INSTALL_PATH}/eamena/.grids_loaded
+        touch ${ARCHES_ROOT}/eamena/.grids_loaded
 EOF
 else echo "grids ok"
 fi
 
 # === === Create superusers === ===
 echo -e "$BORDER  Create EAMENA superusers \n"
-if ! [[ -f ${INSTALL_PATH}/eamena/eamena/management/commands/list_users.py ]]; then
-    cp -v /vagrant/config/django_commands/*.py ${INSTALL_PATH}/eamena/eamena/management/commands
-    chown --no-dereference arches:arches ${INSTALL_PATH}/eamena/eamena/management/commands/*.py
+if ! [[ -f ${ARCHES_ROOT}/eamena/eamena/management/commands/list_users.py ]]; then
+    cp -v /vagrant/config/django_commands/*.py ${ARCHES_ROOT}/eamena/eamena/management/commands
+    chown --no-dereference arches:arches ${ARCHES_ROOT}/eamena/eamena/management/commands/*.py
 else echo "management scripts ok"
 fi 
 
 if ! [[ -z "${DJANGO_SUPERUSER_LIST}" ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
-        source ${INSTALL_PATH}/ENV/bin/activate
-        cd ${INSTALL_PATH}/eamena
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
 
         FIRST_USER=$(echo $DJANGO_SUPERUSER_LIST | cut -f1 -d':')
         USERS="$(python manage.py list_users 2>/dev/null)"
@@ -569,4 +569,4 @@ else echo -e "\nEAMENA v4 is running!"
 fi
 
 echo -e "$BORDER  Provisioning complete! \n$BORDER"
-touch ${INSTALL_PATH}/eamena/.eamena_provisioned
+touch ${ARCHES_ROOT}/eamena/.eamena_provisioned
