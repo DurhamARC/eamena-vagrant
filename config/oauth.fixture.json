@@ -1,0 +1,16 @@
+[{
+  "model": "oauth2_provider.application",
+  "pk": 1,
+  "fields": {
+    "client_id": "<id here>",
+    "user": 1,
+    "redirect_uris": "",
+    "client_type": "public",
+    "authorization_grant_type": "password",
+    "client_secret": "<secret here>",
+    "name": "HeritageBridge",
+    "skip_authorization": false,
+    "created": "2025-08-05T06:20:35.261",
+    "updated": "2025-08-05T06:20:35.261"
+  }
+}]

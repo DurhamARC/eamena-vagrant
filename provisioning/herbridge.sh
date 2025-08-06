@@ -32,7 +32,7 @@ fi
 
 # Set optional version number variables if not set:
 # These can be overriden from deploy.env
-if [ -z "$DEBUG" ] || \
+if [ -z "$DEBUG" ]; then
     export DEBUG=False
 fi
 if [ -z "$NODE_VERSION" ]; then
@@ -51,6 +51,12 @@ if [ -z "$SETTINGS_FILE"]; then
 fi
 if [ -z "$GIT_REPO"]; then
     export GIT_REPO="https://github.com/DurhamARC/HeritageBridge.git"
+fi
+if [ -z "$ARCHES_ROOT" ]; then
+    export ARCHES_ROOT="/opt/arches"
+fi
+if [ -z "$FIXTURE_FILE" ]; then
+    export FIXTURE_FILE="oauth.fixture.json"
 fi
 
 
@@ -191,6 +197,31 @@ if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrat
         python manage.py migrate
 EOF
 else echo "herbridge migrations ok"
+fi
+
+# === === Create HerBridge app in Arches for OAuth using fixture === ===
+echo -e "$BORDER  Create HerBridge OAuth App in EAMENA \n"
+if ! [[ -f "${ARCHES_ROOT}/eamena/eamena/fixtures/${FIXTURE_FILE}" ]]; then
+    /usr/bin/sudo -EH -u arches bash <<"EOF"
+        set -e
+        # Note: load *EAMENA* python environment for this step:
+        source ${ARCHES_ROOT}/ENV/bin/activate
+        cd ${ARCHES_ROOT}/eamena
+
+        export FIXTURES_PATH="${ARCHES_ROOT}/eamena/eamena/fixtures"
+
+        echo "Copying HerBridge App OAuth fixture to $FIXTURES_PATH"
+        mkdir -p $FIXTURES_PATH
+        cp /vagrant/config/$FIXTURE_FILE $FIXTURES_PATH/
+
+        echo "Replacing \$ARCHES_CLIENT_ID and \$ARCHES_CLIENT_SECRET"
+
+        sed -i 's/"client_id": "[^"]*"/"client_id": "'$ARCHES_CLIENT_ID'"/g' $FIXTURES_PATH/$FIXTURE_FILE
+        sed -i 's/"client_secret": "[^"]*"/"client_secret": "'$ARCHES_CLIENT_SECRET'"/g' $FIXTURES_PATH/$FIXTURE_FILE
+
+        python manage.py loaddata $FIXTURE_FILE
+EOF
+else "fixture file already exists (assuming loaded)"
 fi
 
 
