@@ -52,10 +52,10 @@ if [ -z "$NODE_VERSION" ]; then
     export YARN_VERSION=1.22.19
     # prev: 14.17.6; 9.6.0; 1.22.19
 fi
-if [ -z "$SETTINGS_FILE"]; then
+if [ -z "$SETTINGS_FILE" ]; then
     export SETTINGS_FILE="${ARCHES_ROOT}/eamena/eamena/settings_local.py"
 fi
-if [ -z "$DEBUG"]; then
+if [ -z "$DEBUG" ]; then
     export DEBUG=False
 fi
 
