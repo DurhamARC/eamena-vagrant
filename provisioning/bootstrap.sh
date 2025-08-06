@@ -88,6 +88,20 @@ if ! [[ -d ${INSTALL_PATH} ]]; then
 else echo "folder ok"
 fi
 
+if grep '#AuthorizedKeysFile' /etc/ssh/sshd_config || \
+   ! [[ -f ${INSTALL_PATH}/.ssh/authorized_keys ]]; then
+    mkdir -p ${INSTALL_PATH}/.ssh
+    touch ${INSTALL_PATH}/.ssh/authorized_keys
+    chown -R arches:arches ${INSTALL_PATH}/.ssh
+    chmod 600 ${INSTALL_PATH}/.ssh/authorized_keys
+
+    # Update /etc/ssh/sshd_config to allow pubkey auth
+    sed -i '/PubkeyAuthentication/s/^#//g' /etc/ssh/sshd_config
+    sed -i '/AuthorizedKeysFile/s/^#//g' /etc/ssh/sshd_config
+    systemctl reload ssh
+else echo "ssh config ok"
+fi
+
 # === INSTALL PREREQUISITES ===
 # === === 1) Python; Node; and ENV === ===
 echo -e "$BORDER Installing prerequisites \n"
