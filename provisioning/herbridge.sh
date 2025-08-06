@@ -221,7 +221,7 @@ if ! [[ -f "${ARCHES_ROOT}/eamena/eamena/fixtures/${FIXTURE_FILE}" ]]; then
 
         python manage.py loaddata $FIXTURE_FILE
 EOF
-else "fixture file already exists (assuming loaded)"
+else echo "fixture file already exists (assuming loaded)"
 fi
 
 
