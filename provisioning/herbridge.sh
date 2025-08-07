@@ -59,6 +59,13 @@ if [ -z "$FIXTURE_FILE" ]; then
     export FIXTURE_FILE="oauth.fixture.json"
 fi
 
+# For interactive use:
+await() {
+    echo -e $1;
+    if [ "$INTERACTIVE" == "True" ]; then
+        read -n 1 -s -r -p "Press any key to continue"
+    fi
+}
 
 echo -e "\n<><><><><><><><><><><> INSTALL HERITAGEBRIDGE <><><><><><><><><><><>\n"
 
@@ -69,7 +76,7 @@ fi
 
 # === INSTALL PREREQUISITES ===
 # === === 1) Python; Node; and ENV === ===
-echo -e "$BORDER Installing prerequisites \n"
+await "$BORDER Installing prerequisites \n"
 if ! dpkg-query -W -f='${Status}' libjpeg-dev | grep "ok installed"; then
 
     apt-get update
@@ -77,7 +84,7 @@ if ! dpkg-query -W -f='${Status}' libjpeg-dev | grep "ok installed"; then
 fi
 
 # === Clone HerBridge from git ===
-echo -e "$BORDER  Clone HeritageBridge \n"
+await "$BORDER  Clone HeritageBridge \n"
 if ! [[ -f ${INSTALL_PATH}/herbridge/manage.py ]]; then
 
     mkdir -p ${INSTALL_PATH}
@@ -91,7 +98,7 @@ else echo "clone ok"
 fi
 
 # === Create own vENV for HerBridge ===
-echo -e "$BORDER Create Virtualenv in ${INSTALL_PATH} \n"
+await "$BORDER Create Virtualenv in ${INSTALL_PATH} \n"
 if ! [[ -x ${INSTALL_PATH}/ENV/bin/python ]]; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
@@ -109,7 +116,7 @@ else echo "ok"
 fi
 
 # === === Install HeritageBridge Python requirements === ===
-echo -e "$BORDER  Install Python requirements \n"
+await "$BORDER  Install Python requirements \n"
 if ! ${INSTALL_PATH}/ENV/bin/python -m pip show gunicorn >/dev/null || \
    ! ${INSTALL_PATH}/ENV/bin/python -m pip show django >/dev/null; then
 
@@ -123,7 +130,7 @@ else echo "herbridge requirements ok"
 fi
 
 # === Install settings_local.py ===
-echo -e "$BORDER  Install local Django settings \n"
+await "$BORDER  Install local Django settings \n"
 if ! [[ -f ${SETTINGS_FILE} ]]; then 
     /usr/bin/sudo -i --preserve-env=SETTINGS_FILE -u arches bash <<"EOF"
 
@@ -135,7 +142,7 @@ fi
 
 
 # === === Customise settings_local.py === ===
-echo -e "$BORDER  Customise local Django settings \n"
+await "$BORDER  Customise local Django settings \n"
 if ! grep $SECRET_KEY $SETTINGS_FILE 2>&1 >/dev/null; then
 
     set -x
@@ -163,7 +170,7 @@ else echo "settings customised ok"
 fi
 
 # === === Create database credentials === ===
-echo -e "$BORDER  Create Postgres database and user for HerBridge \n"
+await "$BORDER  Create Postgres database and user for HerBridge \n"
 if ! PGPASSWORD="$POSTGRES_PASS" psql -h localhost -U "$POSTGRES_USER" -d $POSTGRES_DB -c '\q' >/dev/null 2>&1; then
 
     # Create user
@@ -177,7 +184,7 @@ else echo "postgres herbridge user ok"
 fi
 
 # === === Setup herbridge logfile === ===
-echo -e "$BORDER  Create and set permissions on logfile \n"
+await "$BORDER  Create and set permissions on logfile \n"
 if [ ! "$(stat -c '%U' "${INSTALL_PATH}/herbridge/herbridge.log")" = "arches" ]; then
     touch ${INSTALL_PATH}/herbridge/herbridge.log
     chmod -v +x ${INSTALL_PATH}/herbridge/herbridge.log
@@ -186,7 +193,7 @@ else echo "logfile OK"
 fi
 
 # === === Run herbridge django migrations === ===
-echo -e "$BORDER  Run migrations if required. Available migrations: \n"
+await "$BORDER  Run migrations if required. Available migrations: \n"
 if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrations | grep '\[ \]'; then
     # Create extension postgis as a superuser for specific herbridge database
     sudo -u postgres psql -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS postgis;"
@@ -200,7 +207,7 @@ else echo "herbridge migrations ok"
 fi
 
 # === === Create HerBridge app in Arches for OAuth using fixture === ===
-echo -e "$BORDER  Create HerBridge OAuth App in EAMENA \n"
+await "$BORDER  Create HerBridge OAuth App in EAMENA \n"
 if ! [[ -f "${ARCHES_ROOT}/eamena/eamena/fixtures/${FIXTURE_FILE}" ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         set -e
@@ -226,7 +233,7 @@ fi
 
 
 # === === Install nvm: node version manager === ===
-echo -e "$BORDER  Installing NVM\n"
+await "$BORDER  Installing NVM\n"
 if ! [[ -d /opt/arches/.nvm ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
         cd
@@ -237,7 +244,7 @@ else echo "~/.nvm exists ok"
 fi
 
 # === === Install node as local arches user === ===
-echo -e "$BORDER  Installing Node; NPM; *locally* as 'arches' user"
+await "$BORDER  Installing Node; NPM; *locally* as 'arches' user"
 /usr/bin/sudo -EH -u arches bash <<"EOF"
     set -e
     export NVM_DIR=$HOME/.nvm;
@@ -262,7 +269,7 @@ echo -e "$BORDER  Installing Node; NPM; *locally* as 'arches' user"
 EOF
 
 # === === Install node_modules for HeritageBridge === ===
-echo -e "$BORDER  Installing node_modules for HeritageBridge"
+await "$BORDER  Installing node_modules for HeritageBridge"
 if ! [[ -d ${INSTALL_PATH}/herbridge/frontend/node_modules ]]; then
 
     echo "ElasticSearch eats RAM. Stopping it while we build node_modules..."
@@ -299,7 +306,7 @@ else echo "herbridge/frontend/node_modules ok!"
 fi
 
 # === === HeritageBridge Systemd service === ===
-echo -e "$BORDER  Create HerBridge Systemd Service \n"
+await "$BORDER  Create HerBridge Systemd Service \n"
 if ! [[ -f /etc/systemd/system/herbridge.service ]]; then
 
     cp -v /vagrant/config/herbridge.service /etc/systemd/system/herbridge.service
