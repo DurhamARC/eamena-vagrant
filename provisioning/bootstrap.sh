@@ -349,7 +349,7 @@ if ! [[ -f ${SETTINGS_FILE} ]]; then
     /usr/bin/sudo -EH -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py INTO THE PROJECT FOLDER ===
-        cp -v /vagrant/arches_install_files/settings_local.py ${SETTINGS_FILE}
+        cp -v /vagrant/config/settings_local.py ${SETTINGS_FILE}
 EOF
 else echo "settings_local ok"
 fi

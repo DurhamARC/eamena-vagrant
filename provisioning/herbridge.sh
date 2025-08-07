@@ -128,7 +128,7 @@ if ! [[ -f ${SETTINGS_FILE} ]]; then
     /usr/bin/sudo -i --preserve-env=SETTINGS_FILE -u arches bash <<"EOF"
 
         echo === COPY template settings_local.py ===
-        cp -v /vagrant/arches_install_files/herbridge_settings.py ${SETTINGS_FILE}
+        cp -v /vagrant/config/herbridge_settings.py ${SETTINGS_FILE}
 EOF
 else echo "settings_local ok"
 fi
