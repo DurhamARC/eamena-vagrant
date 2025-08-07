@@ -6,6 +6,11 @@ export BORDER="\n====================================================\n\n"
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Etc/UTC
 
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 
+   exit 1
+fi
+
 # Import environment:
 export $(grep -v '^#' /vagrant/provisioning/herbridge.env | xargs)
 
