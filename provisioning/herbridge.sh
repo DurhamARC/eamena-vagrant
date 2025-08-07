@@ -104,6 +104,10 @@ fi
 
 # === Create own vENV for HerBridge ===
 await "$BORDER Create Virtualenv in ${INSTALL_PATH} \n"
+if ! dpkg-query -W -f='${Status}' python${PYTHON_VERSION} | grep "ok installed"; then
+    echo "Missing prerequisite: python$PYTHON_VERSION. Exiting."
+    exit 1
+fi
 if ! [[ -x ${INSTALL_PATH}/ENV/bin/python ]]; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
