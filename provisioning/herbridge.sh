@@ -107,6 +107,7 @@ await "$BORDER Create Virtualenv in ${INSTALL_PATH} \n"
 if ! [[ -x ${INSTALL_PATH}/ENV/bin/python ]]; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
+        set -e
         if [ -z "$PYTHON_VERSION" ]; then
             echo "\$PYTHON_VERSION is not set in environment!"
             exit 1
@@ -126,8 +127,10 @@ if ! ${INSTALL_PATH}/ENV/bin/python -m pip show gunicorn >/dev/null || \
    ! ${INSTALL_PATH}/ENV/bin/python -m pip show django >/dev/null; then
 
     /usr/bin/sudo -EH -u arches bash <<"EOF"
+        set -e
         source ${INSTALL_PATH}/ENV/bin/activate
         cd ${INSTALL_PATH}
+
         python -m pip install -r requirements.txt
         python -m pip install gunicorn whitenoise
 EOF
@@ -203,6 +206,7 @@ if ${INSTALL_PATH}/ENV/bin/python ${INSTALL_PATH}/herbridge/manage.py showmigrat
     # Create extension postgis as a superuser for specific herbridge database
     sudo -u postgres psql -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS postgis;"
     /usr/bin/sudo -EH -u arches bash <<"EOF"
+        set -e
         source ${INSTALL_PATH}/ENV/bin/activate
         echo "Run migrations"
         cd ${INSTALL_PATH}/herbridge
