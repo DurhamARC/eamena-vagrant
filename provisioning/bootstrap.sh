@@ -110,7 +110,8 @@ if ! dpkg-query -W -f='${Status}' virtualenv | grep "ok installed"; then
     apt-get update
     apt-get install -y python3-dev python3-virtualenv virtualenv python3-pip \
                        python3-psycopg2 libpq-dev python-is-python3 build-essential \
-                       nodejs npm
+                       nodejs npm \
+                       net-tools # add development tools here
 fi
 # Install a newer Python (to enable debugging):
 if ! dpkg-query -W -f='${Status}' python${PYTHON_VERSION} | grep "ok installed"; then
